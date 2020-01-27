@@ -1,0 +1,6 @@
+{% extends "layout.html" %}
+{% block content %}
+    {% for p, s in pages.items() %}
+    <p>{{ s.title }} = {{ s.summary }}</p>
+    {% endfor %}
+{% endblock %}
