@@ -1,6 +1,10 @@
 {% extends "layout.html" %}
 {% block content %}
-    {% for p, s in pages.items() %}
-    <p>{{ s.title }} = {{ s.summary }}</p>
+    <h1>Ayman's Place</h1>
+    About this thing
+    <h1>Posts</h1>
+    {% for p, s in posts.items() -%}
+    <h2><a href="posts/{{s.slug}}.html">{{ s.title }}</a></h2> 
+    <p>{{ s.summary }}</p>
     {% endfor %}
 {% endblock %}

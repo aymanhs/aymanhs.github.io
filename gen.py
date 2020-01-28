@@ -8,54 +8,45 @@ from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader("./templates"))
 
 
-def make_index(pages):
-    print("Generating index", pages)
-    tplt = env.get_template("index.html")
-    with open("index.html", "w") as genfile:
-        genfile.write(tplt.render(pages=pages))
-
-def handle_md(fn):
-    print("Generating md file", fn)
+def read_md(fn):
+    print("Reading md file", fn)
     with open(fn, "r") as file:
         parsed_md = markdown(
             file.read(), extras=["metadata", "fenced-code-blocks", "tables"]
         )
+        pmd = {"content": parsed_md}
+        pmd.update(parsed_md.metadata)
+        return pmd
 
-        md = parsed_md.metadata
 
-        tplt = env.get_template("post.html")
+def write_html(fn, template, **kwargs):
+    tplt = env.get_template(template)
+    with open(fn, "w") as out:
+        out.write(tplt.render(**kwargs))
 
-        data = {
-            "content": parsed_md,
-        }
 
-        data.update(md)
-
-        html_file = fn.replace("content\\", "").replace(".md", ".html")
-
-        with open(html_file, "w") as genfile:
-            genfile.write(tplt.render(post=data))
-        
-        return md
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # delete the output
     try:
         shutil.rmtree("posts")
+        os.remove("index.html")
     except IOError:
         pass
 
     os.mkdir("posts")
 
-    pages = {}
+    posts = {}
 
-    for f in glob.iglob("content\\posts\\*"):
-        if f.endswith(".md"):
-            md = open(f).read()
-            pages[f] = handle_md(f)
+    for f in glob.iglob("content\\posts\\*.md"):
+        posts[f] = read_md(f)
+
+    for f, post in posts.items():
+        # print("\n\nMaking:", post)
+        if "slug" in post:
+            fn = f"posts\\{post['slug']}.html"
         else:
-            print("Processing: ", f)
-            
+            fn = f.replace("content\\", "post\\").replace(".md", ".html")
+        write_html(fn, "post.html", post=post)
     # make the index of the pages
-    make_index(pages)
+    write_html("index.html", "index.html", posts=posts)

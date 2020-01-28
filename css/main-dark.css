@@ -3,3 +3,11 @@ body {
     color: beige;
     font-family: 'Source Sans Pro', sans-serif;
 }
+
+h2 {
+    text-indent: 1em;
+}
+
+p {
+    padding-left: 3em;
+}
