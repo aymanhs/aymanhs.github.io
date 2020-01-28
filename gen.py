@@ -11,7 +11,7 @@ env = Environment(loader=FileSystemLoader("./templates"))
 def make_index(pages):
     print("Generating index", pages)
     tplt = env.get_template("index.html")
-    with open("_site/index.html", "w") as genfile:
+    with open("index.html", "w") as genfile:
         genfile.write(tplt.render(pages=pages))
 
 def handle_md(fn):
@@ -31,7 +31,7 @@ def handle_md(fn):
 
         data.update(md)
 
-        html_file = fn.replace("content\\", "_site\\").replace(".md", ".html")
+        html_file = fn.replace("content\\", "").replace(".md", ".html")
 
         with open(html_file, "w") as genfile:
             genfile.write(tplt.render(post=data))
@@ -42,22 +42,16 @@ if __name__ == '__main__':
 
     # delete the output
     try:
-        shutil.rmtree("_site")
+        shutil.rmtree("posts")
     except IOError:
         pass
 
-    # copy static files
-    shutil.copytree("static", "_site")
+    os.mkdir("posts")
 
     pages = {}
 
-    for f in glob.iglob("content/**", recursive=True):
-        if os.path.isdir(f):
-            f = f.replace("content\\", "")
-            if f:
-                print("Making output folder:", f)
-                os.makedirs("_site\\" + f)
-        elif f.endswith(".md"):
+    for f in glob.iglob("content\\posts\\*"):
+        if f.endswith(".md"):
             md = open(f).read()
             pages[f] = handle_md(f)
         else:
