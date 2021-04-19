@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<html manifest="cache.manifest">
+
+<head>
+    <title>Iftar Timer</title>
+    <script src="js/sprintf.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/suncalc.js" type="text/javascript" charset="utf-8"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <link href='http://fonts.googleapis.com/css?family=Play' rel='stylesheet' type='text/css'>
+    <script type="text/javascript" charset="utf-8">
+        // var geoSuccess = function (position) {
+        //     document.getElementById('geoLat').innerHTML = position.coords.latitude;
+        //     document.getElementById('geoLon').innerHTML = position.coords.longitude;
+        // };
+
+        // var geoError = function (error) {
+        //     switch (error.code) {
+        //         case error.TIMEOUT:
+        //             // The user didn't accept the callout
+        //             break;
+        //     }
+        // };
+
+        function msToHHMMSS(ms) {
+            var secs = ms / 1000;
+            var h = Math.floor(secs/3600);
+            var m = Math.floor((secs - h*3600)/60);
+            var s = Math.floor(secs - (h*3600) - (m*60));
+
+            if(m<10) {m="0"+m;}
+            if(s<10) {s="0"+s;}
+
+            return "" + h + ":" + m + ":" + s;
+        }
+
+        $(document).ready(function () {
+            // navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
+            var suntimes = SunCalc.getTimes(new Date(), 26.22, 50.54);
+            var iftar = suntimes.sunset;
+            iftar = new Date(iftar.getTime() + 5 * 60 * 1000);
+            var fastStart = suntimes.nightEnd;
+            var dom = Math.ceil((new Date().getTime() - new Date("04/13/2021").getTime()) / (1000 * 3600 * 24))
+            $("#Iftar").html("Ramadhan " + dom + ", Iftar Time = " + iftar.format("hh:mm:ss"));
+            var tdiv = $("#Time");
+            var sunpos = $("#SunPos");
+            $("#SunTimes").html(String.format("Fajr: %s, Sunrise: %s, Noon: %s, Sunset: %s, Fasting for: %s",
+                suntimes.nightEnd.format("hh:mm:ss"),
+                suntimes.sunrise.format("hh:mm:ss"),
+                suntimes.solarNoon.format("hh:mm:ss"),
+                suntimes.sunset.format("HH:mm:ss"),
+                msToHHMMSS(suntimes.sunset - suntimes.nightEnd)
+            ));
+            $("#fastStart").html("Start: " + suntimes.nightEnd.format("hh:mm:ss"));
+            $("#fastEnd").html("End: " + iftar.format("hh:mm:ss"));
+
+            var totalDuration = iftar - fastStart;
+
+            window.setInterval(function () {
+                var now = new Date();
+                var delta = new Date(iftar - now - 4*60*60*1000);
+                tdiv.html(String.format("%02d:%s", delta.getHours(), delta.format("mm:ss")));
+                sunpos.html(String.format("Time now %s, Sun altitude = %5.2f",
+                    now.format("hh:mm:ss"),
+                    SunCalc.getPosition(now, 26.22, 50.54).altitude * 57.2957795131));
+                var currDuration = now - fastStart;
+                $("#fastPct").html(String.format("Progress: %6.2f%%", (currDuration/totalDuration) * 100));
+                $("#progBar").width(String.format("%6.2f%%", (currDuration/totalDuration) * 100))
+            }, 1000);
+        })
+    </script>
+</head>
+
+<body style="font-family: 'Play', sans-serif; background: linear-gradient(SkyBlue, white);" align="center">
+    <div id="Time" style="font-size: 20vw;  text-shadow: 5px 5px 10px #000066;color: #fff"></div>
+    <div id="Iftar" style="font-size: 3vw;"></div>
+    <hr/>
+    <table style="width: 100%; font-size: 2vw;">
+        <tr>
+            <td style="width: 20%; text-align: left;" id="fastStart">Start</td>
+            <td id="fastPct">Progress</td>
+            <td style="width: 20%; text-align: right;" id="fastEnd">End</td>
+        </tr>
+    </table>
+    <div style="background-color: orange; padding: 3px;">
+        <div style="background-color: black; height: 20px" id="progBar"></div>
+    </div>
+    <hr/>
+    <div id="SunPos" style="font-size: 3vw;">Sun Pos</div>
+    <div id="SunTimes">Times</div>
+
+</body>
+
+</html>

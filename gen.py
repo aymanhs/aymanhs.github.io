@@ -46,6 +46,7 @@ if __name__ == "__main__":
         if "slug" in post:
             fn = f"posts\\{post['slug']}.html"
         else:
+            print(f"*** {f} does not have a slug..., using filename")
             fn = f.replace("content\\", "post\\").replace(".md", ".html")
         write_html(fn, "post.html", post=post)
     # make the index of the pages
