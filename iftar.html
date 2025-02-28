@@ -36,14 +36,17 @@
         $(document).ready(function () {
             // navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
             var suntimes = SunCalc.getTimes(new Date(), 26.22, 50.54);
-            var iftar = suntimes.sunset;
-            iftar = new Date(iftar.getTime() + 5 * 60 * 1000);
-            var fastStart = suntimes.nightEnd;
-            var dom = Math.ceil((new Date().getTime() - new Date("03/11/2024").getTime()) / (1000 * 3600 * 24))
-            $("#Iftar").html("Ramadhan " + dom + ", Iftar Time = " + iftar.format("hh:mm:ss"));
+            var iftarTime = suntimes.sunset;
+            iftarTime = new Date(iftarTime.getTime() + 5 * 60 * 1000);
+            var fastingStartTime = suntimes.nightEnd;
+            var dom = Math.ceil((new Date().getTime() - new Date("03/01/2025").getTime()) / (1000 * 3600 * 24))
+            if(dom<1) {
+                dom --;
+            }
+            $("#Iftar").html("Ramadhan " + dom +  ", Iftar at " + iftarTime.format("hh:mm"));
             var tdiv = $("#Time");
             var sunpos = $("#SunPos");
-            $("#SunTimes").html(String.format("Fajr: %s, Sunrise: %s, Noon: %s, Sunset: %s, Fasting for: %s",
+            $("#SunTimes").html(String.format("Fajr: %s<br>Sunrise: %s<br>Noon: %s<br>Sunset: %s<br>Fasting for: %s",
                 suntimes.nightEnd.format("hh:mm:ss"),
                 suntimes.sunrise.format("hh:mm:ss"),
                 suntimes.solarNoon.format("hh:mm:ss"),
@@ -51,18 +54,18 @@
                 msToHHMMSS(suntimes.sunset - suntimes.nightEnd)
             ));
             $("#fastStart").html("Start: " + suntimes.nightEnd.format("hh:mm:ss"));
-            $("#fastEnd").html("End: " + iftar.format("hh:mm:ss"));
+            $("#fastEnd").html("End: " + iftarTime.format("hh:mm:ss"));
 
-            var totalDuration = iftar - fastStart;
+            var totalDuration = iftarTime - fastingStartTime;
 
             window.setInterval(function () {
                 var now = new Date();
-                var delta = iftar.getTime() - now.getTime();
+                var delta = iftarTime.getTime() - now.getTime();
                 tdiv.html(msToHHMMSS(delta));
-                sunpos.html(String.format("Time now %s, Sun altitude = %5.2f",
+                sunpos.html(String.format("Time now %s<br>Sun altitude = %5.2f",
                     now.format("hh:mm:ss"),
                     SunCalc.getPosition(now, 26.22, 50.54).altitude * 57.2957795131));
-                var currDuration = now - fastStart;
+                var currDuration = now - fastingStartTime;
                 $("#fastPct").html(String.format("Progress: %6.2f%%", (currDuration/totalDuration) * 100));
                 $("#progBar").width(String.format("%6.2f%%", (currDuration/totalDuration) * 100))
             }, 1000);
@@ -86,7 +89,8 @@
     </div>
     <hr/>
     <div id="SunPos" style="font-size: 3vw;">Sun Pos</div>
-    <div id="SunTimes">Times</div>
+    <hr>
+    <div id="SunTimes" style="font-size: 2vw;">Times</div>
 
 </body>
 
