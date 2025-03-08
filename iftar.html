@@ -7,6 +7,17 @@
     <script src="js/suncalc.js" type="text/javascript" charset="utf-8"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
     <link href='https://fonts.googleapis.com/css?family=Play' rel='stylesheet' type='text/css'>
+    <style>
+        a {
+            text-decoration: none;
+            color: black;
+            padding: 10px;
+            background-color: lightslategray;
+            box-shadow: black 5px 5px 10px;
+            width: 700vw;
+            border: black 1px solid;
+        }
+    </style>
     <script type="text/javascript" charset="utf-8">
         // var geoSuccess = function (position) {
         //     document.getElementById('geoLat').innerHTML = position.coords.latitude;
@@ -34,10 +45,15 @@
         }
 
         $(document).ready(function () {
+            const searchParams = new URLSearchParams(window.location.search);
+            var iftarOffset = 5;
+            if (searchParams.has('o')) {
+                iftarOffset = parseInt(searchParams.get('o'));
+            }
             // navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
             var suntimes = SunCalc.getTimes(new Date(), 26.22, 50.54);
             var iftarTime = suntimes.sunset;
-            iftarTime = new Date(iftarTime.getTime() + 5 * 60 * 1000);
+            iftarTime = new Date(iftarTime.getTime() + iftarOffset * 60 * 1000);
             var fastingStartTime = suntimes.nightEnd;
             var dom = Math.ceil((new Date().getTime() - new Date("03/01/2025").getTime()) / (1000 * 3600 * 24))
             if(dom<1) {
@@ -46,12 +62,13 @@
             $("#Iftar").html("Ramadhan " + dom +  ", Iftar at " + iftarTime.format("hh:mm"));
             var tdiv = $("#Time");
             var sunpos = $("#SunPos");
-            $("#SunTimes").html(String.format("Fajr: %s<br>Sunrise: %s<br>Noon: %s<br>Sunset: %s<br>Fasting for: %s",
+            const sep = window.innerWidth < window.innerHeight ? "<br>" : ", ";
+            $("#SunTimes").html(String.format(`Fajr: %s${sep}Sunrise: %s${sep}Noon: %s${sep}Sunset: %s${sep}Fasting for: %s`,
                 suntimes.nightEnd.format("hh:mm:ss"),
                 suntimes.sunrise.format("hh:mm:ss"),
                 suntimes.solarNoon.format("hh:mm:ss"),
                 suntimes.sunset.format("HH:mm:ss"),
-                msToHHMMSS(suntimes.sunset - suntimes.nightEnd)
+                msToHHMMSS(iftarTime - suntimes.nightEnd)
             ));
             $("#fastStart").html("Start: " + suntimes.nightEnd.format("hh:mm:ss"));
             $("#fastEnd").html("End: " + iftarTime.format("hh:mm:ss"));
@@ -91,6 +108,14 @@
     <div id="SunPos" style="font-size: 3vw;">Sun Pos</div>
     <hr>
     <div id="SunTimes" style="font-size: 2vw;">Times</div>
+    <hr>
+    <div style="text-align: right; size: 2vw;">
+        Time of Iftar after Sunset: 
+        <a href="?o=0">0</a>
+        <a href="?o=5">+5</a>
+        <a href="?o=10">+10</a>
+        <a href="?o=15">+15</a>
+    </div>
 
 </body>
 
