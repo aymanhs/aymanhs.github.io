@@ -79,7 +79,7 @@
                     progress = 100;
                 }
                 $("#fastPct").html(String.format("Progress: %6.2f%%", progress));
-                $("#progBar").width(String.format("%6.2f%%", (currDuration/totalDuration) * 100))
+                $("#progBar").width(String.format("%6.2f%%", progress));
             }, 1000);
         })
     </script>
