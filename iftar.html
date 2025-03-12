@@ -20,19 +20,6 @@
         }
     </style>
     <script type="text/javascript" charset="utf-8">
-        // var geoSuccess = function (position) {
-        //     document.getElementById('geoLat').innerHTML = position.coords.latitude;
-        //     document.getElementById('geoLon').innerHTML = position.coords.longitude;
-        // };
-
-        // var geoError = function (error) {
-        //     switch (error.code) {
-        //         case error.TIMEOUT:
-        //             // The user didn't accept the callout
-        //             break;
-        //     }
-        // };
-
         function msToHHMMSS(ms) {
             var secs = ms / 1000;
             var h = Math.floor(secs/3600);
@@ -79,12 +66,19 @@
             window.setInterval(function () {
                 var now = new Date();
                 var delta = iftarTime.getTime() - now.getTime();
+                if(now > iftarTime) {
+                    delta = now.getTime() - iftarTime.getTime();
+                }
                 tdiv.html(msToHHMMSS(delta));
                 sunpos.html(String.format("Time now %s<br>Sun altitude = %5.2f",
                     now.format("hh:mm:ss"),
                     SunCalc.getPosition(now, 26.22, 50.54).altitude * 57.2957795131));
                 var currDuration = now - fastingStartTime;
-                $("#fastPct").html(String.format("Progress: %6.2f%%", (currDuration/totalDuration) * 100));
+                var progress = (currDuration/totalDuration) * 100;
+                if(progress > 100) {
+                    progress = 100;
+                }
+                $("#fastPct").html(String.format("Progress: %6.2f%%", progress));
                 $("#progBar").width(String.format("%6.2f%%", (currDuration/totalDuration) * 100))
             }, 1000);
         })
