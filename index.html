@@ -1,26 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="/css/monokai.css">
-    <link rel="stylesheet" href="/css/main-dark.css">
-    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro&display=swap" rel="stylesheet">
-    <title>index</title>
+    <title>Ayman's Homepage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+    </style>
 </head>
-<body>
-    
-    <h1>Ayman's Place</h1>
-    About this thing
-    <h1>Posts</h1>
-    <h2><a href="posts/first.html">First Post</a></h2> 
-    <p>Traditional Turkish pide stuffed with cheese. Great as an appetizer or for breakfast or lunch.</p>
-    <h2><a href="posts/new-year.html">Second Post</a></h2> 
-    <p>New year resolutions</p>
-    
-    <a href="suncalc.html">Sun and Moon Calc</a>
 
-    <br>
+<body class="flex items-center justify-center h-screen font-sans">
+    <div class="text-center">
+        <h1 class="text-5xl font-bold mb-4 text-white tracking-tight">Ayman's Homepage</h1>
+        <p class="text-slate-400 mb-8 text-lg">Welcome to my personal space.</p>
+
+        <a href="suncalc.html"
+            class="inline-block px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-lg transition-all transform hover:scale-105">
+            ☀️ Sun & Moon Tracker
+        </a>
+    </div>
 </body>
+
 </html>
