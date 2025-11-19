@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sun Position & Shadow Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- SunCalc -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; }
+        #canvas-container { width: 100%; height: 60vh; display: block; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Custom slider styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #475569;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="text-slate-200 font-sans">
+
+    <!-- 3D Visualization Area -->
+    <div id="canvas-container" class="relative">
+        <div class="absolute top-4 left-4 pointer-events-none">
+            <h1 class="text-2xl font-bold text-white drop-shadow-md">Sun Tracker</h1>
+            <p id="location-status" class="text-sm text-emerald-400 font-medium flex items-center gap-2">
+                <span class="animate-pulse">●</span> Locating...
+            </p>
+        </div>
+        <div class="absolute top-4 right-4 pointer-events-none text-right">
+            <div class="text-xs text-slate-400 uppercase tracking-wider">North</div>
+            <div class="w-8 h-8 border-2 border-slate-600 rounded-full flex items-center justify-center bg-slate-800/50">
+                <div class="w-0.5 h-4 bg-red-500 rounded-full transform -translate-y-1"></div>
+            </div>
+        </div>
+        <!-- Instructions overlay -->
+        <div class="absolute bottom-4 right-4 pointer-events-none opacity-50 text-xs text-white text-right">
+            Drag to rotate & tilt • Scroll to Zoom
+        </div>
+    </div>
+
+    <!-- Controls & Data Panel -->
+    <div class="glass-panel fixed bottom-0 left-0 w-full h-[40vh] flex flex-col p-4 md:p-6 overflow-y-auto">
+        
+        <!-- Time Slider Control -->
+        <div class="w-full max-w-3xl mx-auto mb-6">
+            <div class="flex justify-between items-end mb-2">
+                <div>
+                    <div class="text-xs text-slate-400 uppercase tracking-widest">Selected Time</div>
+                    <div id="display-time" class="text-3xl font-bold text-white font-mono">--:--</div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="top-view-btn" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs font-bold rounded shadow transition-colors">
+                        TOP VIEW
+                    </button>
+                    <button id="reset-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition-colors">
+                        JUMP TO NOW
+                    </button>
+                </div>
+            </div>
+            <input type="range" id="time-slider" min="0" max="1439" value="720" class="w-full">
+            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                <span>00:00</span>
+                <span>12:00</span>
+                <span>23:59</span>
+            </div>
+        </div>
+
+        <!-- Day of Year Slider -->
+        <div class="w-full max-w-3xl mx-auto mb-6">
+            <div class="flex justify-between items-end mb-2">
+                <div class="flex justify-between items-end w-full">
+                    <div>
+                        <div class="text-xs text-slate-400 uppercase tracking-widest">Date</div>
+                        <div id="display-date" class="text-xl font-bold text-white font-mono">--/--</div>
+                    </div>
+                    <button id="today-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition-colors">
+                        TODAY
+                    </button>
+                </div>
+            </div>
+            <input type="range" id="date-slider" min="1" max="365" value="1" class="w-full">
+            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                <span>Jan 1</span>
+                <span class="hidden sm:inline">Jul 1</span>
+                <span>Dec 31</span>
+            </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 w-full max-w-7xl mx-auto">
+            <!-- Card for Fajr -->
+            <div id="card-fajr" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Fajr</div>
+                <div id="val-fajr" class="text-lg font-semibold text-cyan-300">--:--</div>
+            </div>
+
+            <!-- Card for Dawn -->
+            <div id="card-dawn" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Dawn</div>
+                <div id="val-dawn" class="text-lg font-semibold text-sky-300">--:--</div>
+            </div>
+
+            <!-- Card 1: Sunrise -->
+            <div id="card-sunrise" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Sunrise</div>
+                <div id="val-sunrise" class="text-lg font-semibold text-amber-300">--:--</div>
+            </div>
+            
+            <!-- Card 2: Solar Noon -->
+            <div id="card-noon" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Solar Noon</div>
+                <div id="val-noon" class="text-lg font-semibold text-yellow-400">--:--</div>
+            </div>
+
+            <!-- Card 3: Sunset -->
+            <div id="card-sunset" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Sunset</div>
+                <div id="val-sunset" class="text-lg font-semibold text-orange-400">--:--</div>
+            </div>
+
+            <!-- Card 5: Dusk -->
+            <div id="card-dusk" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Dusk</div>
+                <div id="val-dusk" class="text-lg font-semibold text-indigo-300">--:--</div>
+            </div>
+
+            <!-- Card 6: Ishaa -->
+            <div id="card-ishaa" class="bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
+                <div class="text-xs text-slate-400 uppercase">Ishaa</div>
+                <div id="val-ishaa" class="text-lg font-semibold text-purple-400">--:--</div>
+            </div>
+
+            <!-- Card 7: Elevation -->
+            <div class="bg-slate-800/50 p-2 rounded-lg border border-slate-700">
+                <div class="text-xs text-slate-400 uppercase">Elevation</div>
+                <div id="val-elevation" class="text-lg font-semibold text-blue-300">--°</div>
+                <div id="val-azimuth" class="text-[10px] text-slate-500">Azimuth: --°</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global State ---
+        // Default to London if location fails
+        let userLat = 51.5074;
+        let userLon = -0.1278;
+        let isManualMode = false;
+        let currentDate = new Date();
+        let sunPathLine = null; 
+        let sunDirectionArrow = null; 
+        let seasonLine = null; 
+        let moonMesh = null; 
+        let moonPathLine = null; 
+        
+        // Config
+        const SUN_ORBIT_RADIUS = 25; // Reduced from 50 to bring sun closer
+        const MOON_ORBIT_RADIUS = SUN_ORBIT_RADIUS - 5;
+
+        // --- DOM Elements ---
+        const locationStatus = document.getElementById('location-status');
+        const timeSlider = document.getElementById('time-slider');
+        const displayTimeEl = document.getElementById('display-time');
+        const resetBtn = document.getElementById('reset-btn');
+        const topViewBtn = document.getElementById('top-view-btn');
+        const dateSlider = document.getElementById('date-slider');
+        const displayDateEl = document.getElementById('display-date');
+        const todayBtn = document.getElementById('today-btn');
+        
+        // Data Elements
+        const elSunrise = document.getElementById('val-sunrise');
+        const elNoon = document.getElementById('val-noon');
+        const elSunset = document.getElementById('val-sunset');
+        const elElevation = document.getElementById('val-elevation');
+        const elAzimuth = document.getElementById('val-azimuth');
+        const elDawn = document.getElementById('val-dawn');
+        const elDusk = document.getElementById('val-dusk');
+        const elIshaa = document.getElementById('val-ishaa');
+        const elFajr = document.getElementById('val-fajr');
+
+        // Clickable cards
+        const cardSunrise = document.getElementById('card-sunrise');
+        const cardNoon = document.getElementById('card-noon');
+        const cardSunset = document.getElementById('card-sunset');
+        const cardDawn = document.getElementById('card-dawn');
+        const cardDusk = document.getElementById('card-dusk');
+        const cardIshaa = document.getElementById('card-ishaa');
+        const cardFajr = document.getElementById('card-fajr');
+
+        // Layer constants
+        const SCENE_LAYER = 0;
+        const MOON_LAYER = 1;
+
+        // --- Three.js Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#0f172a'); 
+        // FOG DISABLED
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.layers.enableAll();
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // --- Expanded Camera Controls ---
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraAzimuth = 0; // Horizontal rotation
+        let cameraElevation = 0.5; // Vertical angle (radians)
+        let cameraRadius = 45; // Start a bit further back to see the scene
+
+        // Initial Position
+        updateCameraPosition();
+
+        container.addEventListener('mousedown', (e) => isDragging = true);
+        container.addEventListener('mouseup', (e) => isDragging = false);
+        container.addEventListener('mouseleave', () => isDragging = false);
+        
+        container.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                const deltaX = e.offsetX - previousMousePosition.x;
+                const deltaY = e.offsetY - previousMousePosition.y;
+
+                // Adjust angles
+                cameraAzimuth -= deltaX * 0.01;
+                cameraElevation += deltaY * 0.01;
+
+                // Clamp vertical angle
+                cameraElevation = Math.max(0.1, Math.min(Math.PI / 2, cameraElevation));
+
+                updateCameraPosition();
+            }
+            previousMousePosition = { x: e.offsetX, y: e.offsetY };
+        });
+
+        // Mouse Wheel Zoom
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            // Zoom speed
+            const zoomSpeed = 0.05;
+            // Adjust radius based on scroll delta
+            cameraRadius += e.deltaY * zoomSpeed;
+            // Clamp zoom
+            cameraRadius = Math.max(10, Math.min(100, cameraRadius));
+            updateCameraPosition();
+        });
+
+        // Touch support
+        container.addEventListener('touchstart', (e) => { 
+            if(e.touches.length > 0) {
+                isDragging = true; 
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        });
+        container.addEventListener('touchend', () => isDragging = false);
+        container.addEventListener('touchmove', (e) => {
+            if(isDragging && e.touches.length > 0) {
+                const deltaX = e.touches[0].clientX - previousMousePosition.x;
+                const deltaY = e.touches[0].clientY - previousMousePosition.y;
+
+                cameraAzimuth -= deltaX * 0.01;
+                cameraElevation += deltaY * 0.01;
+                cameraElevation = Math.max(0.1, Math.min(Math.PI / 2, cameraElevation));
+
+                updateCameraPosition();
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        });
+
+        function updateCameraPosition() {
+            // Convert Spherical to Cartesian
+            const y = cameraRadius * Math.sin(cameraElevation);
+            const rXZ = cameraRadius * Math.cos(cameraElevation); 
+            const x = rXZ * Math.sin(cameraAzimuth);
+            const z = rXZ * Math.cos(cameraAzimuth);
+
+            camera.position.set(x, y, z);
+            camera.lookAt(0, 2, 0); 
+        }
+
+        // --- Scene Objects ---
+
+        // 1. Ground - Beige
+        const planeGeometry = new THREE.PlaneGeometry(100, 100);
+        const planeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xe6d8ad, // Beige / Sand color
+            roughness: 1.0,
+            metalness: 0.0,
+            transparent: true,
+            opacity: 0.5
+        });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // 2. Grid Helper
+        const gridHelper = new THREE.GridHelper(100, 50, 0x94a3b8, 0xcbd5e1);
+        scene.add(gridHelper);
+
+        // 3. North Arrow
+        const dir = new THREE.Vector3(0, 0, -1);
+        const origin = new THREE.Vector3(0, 0.1, 8);
+        const length = 4;
+        const hex = 0xef4444;
+        const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex, 1, 0.5);
+        scene.add(arrowHelper);
+
+        // 3.5. Sun Direction Arrow
+        sunDirectionArrow = new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0, 0.1, 0), 15, 0xffff00, 2, 1);
+        scene.add(sunDirectionArrow);
+
+        // 3.6. Seasonal Line
+        const seasonLineMat = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 5 });
+        const seasonLineGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-10, 0, 0), new THREE.Vector3(10, 0, 0)]);
+        seasonLine = new THREE.Line(seasonLineGeom, seasonLineMat);
+        scene.add(seasonLine);
+
+        // 7. Moon Representation
+        const moonGeometry = new THREE.SphereGeometry(1.2, 32, 32); // Slightly smaller than sun
+        const moonMaterial = new THREE.MeshStandardMaterial({
+            color: 0xbbbbbb, // A light grey color
+            metalness: 0.1,
+            roughness: 0.8
+        });
+        moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+        moonMesh.castShadow = true;
+        moonMesh.receiveShadow = true;
+        moonMesh.layers.set(MOON_LAYER);
+        scene.add(moonMesh);
+
+        // 4. The Long Box
+        const boxHeight = 6;
+        const boxGeometry = new THREE.BoxGeometry(1, boxHeight, 1);
+        const boxMaterial = new THREE.MeshStandardMaterial({ color: 0xfbbf24 }); 
+        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+        box.position.y = boxHeight / 2;
+        box.castShadow = true;
+        box.receiveShadow = true;
+        scene.add(box);
+
+        // 5. Sun Representation (Visual Sphere)
+        const sunGeometry = new THREE.SphereGeometry(1.5, 32, 32); // Slightly smaller visual sun
+        const sunMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xffff00,
+        });
+        const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+        scene.add(sunMesh);
+
+        // 6. Lighting
+
+        // Ambient Light affects everything
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+        scene.add(ambientLight);
+
+        // Light for the main scene (ground, box)
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.layers.set(SCENE_LAYER);
+
+        // Dedicated light for the moon that is always on
+        const sunLightForMoon = new THREE.DirectionalLight(0xffffff, 1.0);
+        sunLightForMoon.layers.set(MOON_LAYER);
+        scene.add(sunLightForMoon);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        
+        // Shadow camera size
+        const d = 25;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0005; 
+        
+        scene.add(sunLight);
+
+        // --- Logic ---
+
+        function getSunPositionVector(azimuth, altitude, radius) {
+            // Convert Azimuth/Altitude to Cartesian X/Y/Z
+            const x = radius * -Math.sin(azimuth) * Math.cos(altitude);
+            const y = radius * Math.sin(altitude);
+            const z = radius * Math.cos(azimuth) * Math.cos(altitude);
+            return { x, y, z };
+        }
+
+        function updateSunPath(date) {
+            if (sunPathLine) {
+                scene.remove(sunPathLine);
+                sunPathLine.geometry.dispose();
+                sunPathLine.material.dispose();
+            }
+
+            const points = [];
+            const pathDate = new Date(date);
+            pathDate.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i <= 24 * 4; i++) {
+                const sunPos = SunCalc.getPosition(pathDate, userLat, userLon);
+                const vec = getSunPositionVector(sunPos.azimuth, sunPos.altitude, SUN_ORBIT_RADIUS);
+                points.push(new THREE.Vector3(vec.x, vec.y, vec.z));
+                pathDate.setMinutes(pathDate.getMinutes() + 15);
+            }
+
+            const path = new THREE.CatmullRomCurve3(points);
+            const tubularSegments = 256;
+            const radius = 0.1; // Increased radius for thickness
+            const radialSegments = 8;
+            const tubeGeometry = new THREE.TubeGeometry(path, tubularSegments, radius, radialSegments, false);
+
+            const colors = [];
+            const colorAbove = new THREE.Color(0xffd700);
+            const colorBelow = new THREE.Color(0x5a6a8a);
+            const tubePoints = tubeGeometry.attributes.position.array;
+
+            for (let i = 0; i < tubePoints.length; i += 3) {
+                const y = tubePoints[i+1];
+                const color = (y >= 0) ? colorAbove : colorBelow;
+                colors.push(color.r, color.g, color.b);
+            }
+
+            tubeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+            sunPathLine = new THREE.Mesh(tubeGeometry, material);
+            scene.add(sunPathLine);
+        }
+
+        function updateSeasonLine(date) {
+            if (!seasonLine) return;
+
+            const latitudeInRad = userLat * Math.PI / 180;
+            
+            const noonTime = SunCalc.getTimes(date, userLat, userLon).solarNoon;
+            const noonPos = SunCalc.getPosition(noonTime, userLat, userLon);
+            
+            // Calculate declination from noon altitude
+            const declination = noonPos.altitude - (Math.PI/2 - latitudeInRad);
+            
+            // Calculate path circle radius and center
+            const pathRadius = SUN_ORBIT_RADIUS * Math.cos(declination);
+            const centerDist = SUN_ORBIT_RADIUS * Math.sin(declination);
+            
+            // Pole axis is tilted from Y-axis towards North (-Z)
+            const poleAxis = new THREE.Vector3(0, Math.sin(latitudeInRad), -Math.cos(latitudeInRad));
+            const centerPos = poleAxis.multiplyScalar(centerDist);
+
+            const startPoint = new THREE.Vector3(-pathRadius, 0, 0).add(centerPos);
+            const endPoint = new THREE.Vector3(pathRadius, 0, 0).add(centerPos);
+
+            seasonLine.geometry.setFromPoints([startPoint, endPoint]);
+        }
+
+        function updateMoonPath(date) {
+            if (moonPathLine) {
+                scene.remove(moonPathLine);
+                moonPathLine.geometry.dispose();
+                moonPathLine.material.dispose();
+            }
+
+            const points = [];
+            const pathDate = new Date(date);
+            pathDate.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i <= 24 * 4; i++) {
+                const moonPos = SunCalc.getMoonPosition(pathDate, userLat, userLon);
+                const vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, MOON_ORBIT_RADIUS);
+                points.push(new THREE.Vector3(vec.x, vec.y, vec.z));
+                pathDate.setMinutes(pathDate.getMinutes() + 15);
+            }
+
+            const path = new THREE.CatmullRomCurve3(points);
+            const tubeGeometry = new THREE.TubeGeometry(path, 256, 0.3, 8, false);
+
+            const colors = [];
+            const colorAbove = new THREE.Color(0xeaeaea); // Light gray
+            const colorBelow = new THREE.Color(0x444444); // Dark gray
+            const tubePoints = tubeGeometry.attributes.position.array;
+
+            for (let i = 0; i < tubePoints.length; i += 3) {
+                const y = tubePoints[i+1];
+                const color = (y >= 0) ? colorAbove : colorBelow;
+                colors.push(color.r, color.g, color.b);
+            }
+
+            tubeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+            moonPathLine = new THREE.Mesh(tubeGeometry, material);
+            scene.add(moonPathLine);
+        }
+
+        function updateMoonPosition(date) {
+            if (!moonMesh) return;
+            const moonPos = SunCalc.getMoonPosition(date, userLat, userLon);
+            const vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, MOON_ORBIT_RADIUS);
+            moonMesh.position.set(vec.x, vec.y, vec.z);
+        }
+
+        function updateSunPosition(date) {
+            if (typeof SunCalc === 'undefined') return;
+
+            const sunPos = SunCalc.getPosition(date, userLat, userLon);
+            const azimuth = sunPos.azimuth;
+            const altitude = sunPos.altitude;
+
+            // Update UI
+            const degreesAlt = (altitude * (180/Math.PI)).toFixed(1);
+            const degreesAz = (azimuth * (180/Math.PI)).toFixed(1);
+            elElevation.innerText = `${degreesAlt}°`;
+            elAzimuth.innerText = `Az: ${degreesAz}°`;
+
+            // Update sun direction arrow
+            if (sunDirectionArrow) {
+                sunDirectionArrow.setDirection(new THREE.Vector3(-Math.sin(azimuth), 0, Math.cos(azimuth)));
+            }
+
+            // Update 3D Sun & Light Position
+            const pos = getSunPositionVector(azimuth, altitude, SUN_ORBIT_RADIUS);
+
+            // Both sun lights track the sun's position
+            sunLight.position.set(pos.x, pos.y, pos.z);
+            sunLightForMoon.position.set(pos.x, pos.y, pos.z);
+            sunMesh.position.set(pos.x, pos.y, pos.z);
+            sunMesh.visible = true; // Sun is always visible
+
+            // --- Sun, Light, & Background Color Logic ---
+            const colorHorizon = new THREE.Color(0xff4500); // Orange/Red
+            const colorNoon = new THREE.Color(0xffffff);    // White
+            
+            if (altitude < -0.1) {
+                // Night
+                sunLight.intensity = 0;
+                sunMesh.material.color.set(0x5a6a8a); // Dark blue for night sun
+                scene.background = new THREE.Color('#0f172a');
+
+            } else if (altitude < 0.1) {
+                // Twilight
+                sunLight.intensity = 0.6;
+                let t = THREE.MathUtils.clamp(altitude / 0.5, 0, 1);
+                const sunColor = colorHorizon.clone().lerp(colorNoon, t);
+                sunLight.color.copy(sunColor);
+                sunMesh.material.color.copy(sunColor);
+
+                const bgNight = new THREE.Color('#0f172a');
+                const bgDay = new THREE.Color('#38bdf8');
+                const bgT = THREE.MathUtils.mapLinear(altitude, -0.1, 0.1, 0, 1);
+                scene.background = bgNight.clone().lerp(bgDay, bgT);
+
+            } else {
+                // Day
+                sunLight.intensity = 1.3;
+                let t = THREE.MathUtils.clamp(altitude / 0.5, 0, 1);
+                const sunColor = colorHorizon.clone().lerp(colorNoon, t);
+                sunLight.color.copy(sunColor);
+                sunMesh.material.color.copy(sunColor);
+                scene.background = new THREE.Color('#38bdf8'); 
+            }
+            
+            displayTimeEl.innerText = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function updateSolarTimes(date) {
+            if (typeof SunCalc === 'undefined') return;
+
+            const times = SunCalc.getTimes(date, userLat, userLon);
+            const formatTime = (d) => {
+                if (!d || d.toString() === 'Invalid Date') return '--:--';
+                return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            };
+            
+            elFajr.innerText = formatTime(times.nightEnd);
+            elDawn.innerText = formatTime(times.dawn);
+            elSunrise.innerText = formatTime(times.sunrise);
+            elNoon.innerText = formatTime(times.solarNoon);
+            elSunset.innerText = formatTime(times.sunset);
+            elDusk.innerText = formatTime(times.dusk);
+            elIshaa.innerText = formatTime(times.night);
+        }
+
+        // --- Geolocation & Init ---
+
+        function setDefaultLocation(msg) {
+            locationStatus.innerHTML = `<span class="text-orange-400">⚠</span> ${msg} Using London.`;
+            const now = new Date();
+            updateSolarTimes(now);
+            updateSunPosition(now);
+            updateSunPath(now);
+            updateSeasonLine(now);
+            updateMoonPath(now);
+            updateMoonPosition(now);
+            const totalMinutes = now.getHours() * 60 + now.getMinutes();
+            timeSlider.value = totalMinutes;
+        }
+
+        function init() {
+            // Init Date Slider
+            const year = currentDate.getFullYear();
+            const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            dateSlider.max = isLeap ? 366 : 365;
+            
+            const start = new Date(year, 0, 0);
+            const diff = currentDate - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
+            dateSlider.value = dayOfYear;
+            displayDateEl.innerText = currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLat = position.coords.latitude;
+                        userLon = position.coords.longitude;
+                        locationStatus.innerHTML = `<span class="text-emerald-400">●</span> ${userLat.toFixed(2)}, ${userLon.toFixed(2)}`;
+                        
+                        const now = new Date();
+                        updateSolarTimes(now);
+                        updateSunPosition(now);
+                        updateSunPath(now);
+                        updateSeasonLine(now);
+                        updateMoonPath(now);
+                        updateMoonPosition(now);
+                        
+                        const totalMinutes = now.getHours() * 60 + now.getMinutes();
+                        timeSlider.value = totalMinutes;
+                    },
+                    (error) => {
+                        let msg = "Location denied.";
+                        if (error.message) msg = error.message;
+                        console.log("Geolocation error:", msg);
+                        setDefaultLocation(msg);
+                    }
+                );
+            } else {
+                setDefaultLocation("Geolocation not supported.");
+            }
+        }
+
+        // --- Event Listeners ---
+
+        function setTimeTo(date) {
+            if (!date || date.toString() === 'Invalid Date') return;
+            
+            isManualMode = true;
+            const totalMinutes = date.getHours() * 60 + date.getMinutes();
+            timeSlider.value = totalMinutes;
+            
+            currentDate = date;
+            updateSunPosition(date);
+            updateMoonPosition(date);
+            
+            resetBtn.classList.remove('bg-slate-600');
+            resetBtn.classList.add('bg-indigo-600');
+            resetBtn.innerText = "RESET TO NOW";
+        }
+
+        cardFajr.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).nightEnd));
+        cardDawn.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).dawn));
+        cardSunrise.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).sunrise));
+        cardNoon.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).solarNoon));
+        cardSunset.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).sunset));
+        cardDusk.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).dusk));
+        cardIshaa.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).night));
+
+        topViewBtn.addEventListener('click', () => {
+            cameraElevation = Math.PI / 2;
+            updateCameraPosition();
+        });
+
+        dateSlider.addEventListener('input', (e) => {
+            isManualMode = true;
+            
+            const dayOfYear = parseInt(e.target.value);
+            const newDate = new Date(new Date().getFullYear(), 0, dayOfYear);
+            
+            const minutes = parseInt(timeSlider.value);
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            newDate.setHours(hours, mins);
+
+            currentDate = newDate;
+            
+            updateSunPosition(currentDate);
+            updateSolarTimes(currentDate);
+            updateSunPath(currentDate);
+            updateSeasonLine(currentDate);
+            updateMoonPath(currentDate);
+            updateMoonPosition(currentDate);
+            displayDateEl.innerText = currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            resetBtn.classList.remove('bg-slate-600');
+            resetBtn.classList.add('bg-indigo-600');
+            resetBtn.innerText = "RESET TO NOW";
+        });
+
+        todayBtn.addEventListener('click', () => {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 0);
+            const diff = now - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
+            
+            dateSlider.value = dayOfYear;
+            dateSlider.dispatchEvent(new Event('input'));
+        });
+
+        timeSlider.addEventListener('input', (e) => {
+            isManualMode = true;
+            const minutes = parseInt(e.target.value);
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            const simDate = new Date(currentDate); // Use date from date slider
+            simDate.setHours(hours, mins);
+            
+            currentDate = simDate;
+            updateSunPosition(simDate);
+            updateMoonPosition(simDate);
+            
+            resetBtn.classList.remove('bg-slate-600');
+            resetBtn.classList.add('bg-indigo-600');
+            resetBtn.innerText = "RESET TO NOW";
+        });
+
+        resetBtn.addEventListener('click', () => {
+            isManualMode = false;
+            const now = new Date();
+
+            // Update date slider to today
+            const start = new Date(now.getFullYear(), 0, 0);
+            const diff = now - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
+            dateSlider.value = dayOfYear;
+            displayDateEl.innerText = now.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            // Update time slider to now
+            const totalMinutes = now.getHours() * 60 + now.getMinutes();
+            timeSlider.value = totalMinutes;
+            
+            // Update everything
+            currentDate = now;
+            updateSunPosition(now);
+            updateSolarTimes(now);
+            updateSunPath(now);
+            updateSeasonLine(now);
+            updateMoonPath(now);
+            updateMoonPosition(now);
+
+            resetBtn.innerText = "LIVE";
+        });
+
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!isManualMode) {
+                const now = new Date();
+                if (now.getMinutes() !== currentDate.getMinutes()) {
+                    currentDate = now;
+                    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+                    if (!isDragging && !isManualMode) {
+                        timeSlider.value = totalMinutes;
+                    }
+                    updateSunPosition(now);
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Wait for libraries
+        window.onload = function() {
+            if (typeof SunCalc !== 'undefined' && typeof THREE !== 'undefined') {
+                init();
+                animate();
+            } else {
+                locationStatus.innerText = "Error loading libraries.";
+            }
+        };
+
+    </script>
+</body>
+</html>
