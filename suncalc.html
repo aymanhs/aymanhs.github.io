@@ -206,7 +206,6 @@
 
         // Config
         const SUN_ORBIT_RADIUS = 25; // Reduced from 50 to bring sun closer
-        const MOON_ORBIT_RADIUS = SUN_ORBIT_RADIUS - 5;
 
         // --- DOM Elements ---
         const locationStatus = document.getElementById('location-status');
@@ -467,6 +466,18 @@
         }
 
 
+        function getMoonVisualRadius(distance) {
+            // Map distance (approx 360000 - 406000 km) to visual radius (10 - 40)
+            // Strongly Exaggerated effect to cross the Sun's orbit (25)
+            const minKm = 360000;
+            const maxKm = 406000;
+            const minRad = 10;
+            const maxRad = 20;
+
+            const t = (distance - minKm) / (maxKm - minKm);
+            return THREE.MathUtils.lerp(minRad, maxRad, t);
+        }
+
         function updateSunPath(date) {
             if (sunPathLine) {
                 scene.remove(sunPathLine);
@@ -547,7 +558,8 @@
 
             for (let i = 0; i <= 24 * 4; i++) {
                 const moonPos = SunCalc.getMoonPosition(pathDate, userLat, userLon);
-                let vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, MOON_ORBIT_RADIUS);
+                const radius = getMoonVisualRadius(moonPos.distance);
+                let vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, radius);
                 points.push(new THREE.Vector3(vec.x, vec.y, vec.z));
                 pathDate.setMinutes(pathDate.getMinutes() + 15);
             }
@@ -576,8 +588,18 @@
         function updateMoonPosition(date) {
             if (!moonMesh) return;
             const moonPos = SunCalc.getMoonPosition(date, userLat, userLon);
-            let vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, MOON_ORBIT_RADIUS);
+            const radius = getMoonVisualRadius(moonPos.distance);
+            let vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, radius);
             moonMesh.position.set(vec.x, vec.y, vec.z);
+
+            // Scale moon based on distance (closer = larger)
+            // Base scale is 1.0. Exaggerate variation.
+            // Ref distance = 384400 km
+            const baseScale = 1.0;
+            const scaleFactor = 384400 / moonPos.distance;
+            // Exaggerate the scale difference: power of 5
+            const finalScale = baseScale * Math.pow(scaleFactor, 5);
+            moonMesh.scale.set(finalScale, finalScale, finalScale);
         }
 
         function updateSunPosition(date) {
