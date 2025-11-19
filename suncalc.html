@@ -202,11 +202,11 @@
         let seasonLine = null;
         let moonMesh = null;
         let moonPathLine = null;
+        let sunGlow = null;
 
         // Config
         const SUN_ORBIT_RADIUS = 25; // Reduced from 50 to bring sun closer
         const MOON_ORBIT_RADIUS = SUN_ORBIT_RADIUS - 5;
-        const MOON_INCLINATION = 5.15 * (Math.PI / 180); // 5.15 degrees in radians
 
         // --- DOM Elements ---
         const locationStatus = document.getElementById('location-status');
@@ -281,7 +281,7 @@
                 cameraElevation += deltaY * 0.01;
 
                 // Clamp vertical angle
-                cameraElevation = Math.max(0.1, Math.min(Math.PI / 2, cameraElevation));
+                cameraElevation = Math.max(0.01, Math.min(Math.PI / 2, cameraElevation));
 
                 updateCameraPosition();
             }
@@ -315,7 +315,7 @@
 
                 cameraAzimuth -= deltaX * 0.01;
                 cameraElevation += deltaY * 0.01;
-                cameraElevation = Math.max(0.1, Math.min(Math.PI / 2, cameraElevation));
+                cameraElevation = Math.max(0.01, Math.min(Math.PI / 2, cameraElevation));
 
                 updateCameraPosition();
                 previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -379,7 +379,7 @@
             roughness: 0.8
         });
         moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
-        moonMesh.castShadow = true;
+        moonMesh.castShadow = false;
         moonMesh.receiveShadow = true;
         moonMesh.layers.set(MOON_LAYER);
         scene.add(moonMesh);
@@ -402,10 +402,36 @@
         const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
         scene.add(sunMesh);
 
+        // 5.5 Sun Glow
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.4)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const sunGlowMaterial = new THREE.SpriteMaterial({
+            map: createGlowTexture(),
+            color: 0xffff00,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        sunGlow = new THREE.Sprite(sunGlowMaterial);
+        sunGlow.scale.set(8, 8, 1); // Larger than sun
+        scene.add(sunGlow);
+
         // 6. Lighting
 
         // Ambient Light affects everything
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
         scene.add(ambientLight);
 
         // Light for the main scene (ground, box)
@@ -440,19 +466,6 @@
             return { x, y, z };
         }
 
-        function applyMoonInclination(vec) {
-            // Rotate around X-axis to simulate inclination relative to ecliptic
-            const cos = Math.cos(MOON_INCLINATION);
-            const sin = Math.sin(MOON_INCLINATION);
-
-            // Standard rotation around X-axis:
-            // y' = y*cos - z*sin
-            // z' = y*sin + z*cos
-            const y = vec.y * cos - vec.z * sin;
-            const z = vec.y * sin + vec.z * cos;
-
-            return { x: vec.x, y: y, z: z };
-        }
 
         function updateSunPath(date) {
             if (sunPathLine) {
@@ -535,13 +548,12 @@
             for (let i = 0; i <= 24 * 4; i++) {
                 const moonPos = SunCalc.getMoonPosition(pathDate, userLat, userLon);
                 let vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, MOON_ORBIT_RADIUS);
-                vec = applyMoonInclination(vec);
                 points.push(new THREE.Vector3(vec.x, vec.y, vec.z));
                 pathDate.setMinutes(pathDate.getMinutes() + 15);
             }
 
             const path = new THREE.CatmullRomCurve3(points);
-            const tubeGeometry = new THREE.TubeGeometry(path, 256, 0.3, 8, false);
+            const tubeGeometry = new THREE.TubeGeometry(path, 256, 0.05, 8, false);
 
             const colors = [];
             const colorAbove = new THREE.Color(0xeaeaea); // Light gray
@@ -565,7 +577,6 @@
             if (!moonMesh) return;
             const moonPos = SunCalc.getMoonPosition(date, userLat, userLon);
             let vec = getSunPositionVector(moonPos.azimuth, moonPos.altitude, MOON_ORBIT_RADIUS);
-            vec = applyMoonInclination(vec);
             moonMesh.position.set(vec.x, vec.y, vec.z);
         }
 
@@ -596,6 +607,9 @@
             sunMesh.position.set(pos.x, pos.y, pos.z);
             sunMesh.visible = true; // Sun is always visible
 
+            sunGlow.position.set(pos.x, pos.y, pos.z);
+            sunGlow.visible = true;
+
             // --- Sun, Light, & Background Color Logic ---
             const colorHorizon = new THREE.Color(0xff4500); // Orange/Red
             const colorNoon = new THREE.Color(0xffffff);    // White
@@ -604,6 +618,8 @@
                 // Night
                 sunLight.intensity = 0;
                 sunMesh.material.color.set(0x5a6a8a); // Dark blue for night sun
+                sunGlow.material.opacity = 0.1;
+                sunGlow.material.color.set(0x5a6a8a);
                 scene.background = new THREE.Color('#0f172a');
 
             } else if (altitude < 0.1) {
@@ -613,6 +629,8 @@
                 const sunColor = colorHorizon.clone().lerp(colorNoon, t);
                 sunLight.color.copy(sunColor);
                 sunMesh.material.color.copy(sunColor);
+                sunGlow.material.color.copy(sunColor);
+                sunGlow.material.opacity = 0.8;
 
                 const bgNight = new THREE.Color('#0f172a');
                 const bgDay = new THREE.Color('#38bdf8');
@@ -621,11 +639,13 @@
 
             } else {
                 // Day
-                sunLight.intensity = 1.8;
+                sunLight.intensity = 2.8;
                 let t = THREE.MathUtils.clamp(altitude / 0.5, 0, 1);
                 const sunColor = colorHorizon.clone().lerp(colorNoon, t);
                 sunLight.color.copy(sunColor);
                 sunMesh.material.color.copy(sunColor);
+                sunGlow.material.color.copy(sunColor);
+                sunGlow.material.opacity = 1.0;
                 scene.background = new THREE.Color('#38bdf8');
             }
 
