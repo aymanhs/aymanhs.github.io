@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GridLang - Visual Scripting Language</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #2d2d30;
+            padding: 15px 20px;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: #4ec9b0;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #3e3e42;
+        }
+
+        .toolbar {
+            background: #2d2d30;
+            padding: 10px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar label {
+            margin-right: 5px;
+        }
+
+        .toolbar select {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button.clear {
+            background: #6c6c6c;
+        }
+
+        button.clear:hover {
+            background: #7c7c7c;
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px;
+            height: 100%;
+            background: #1a1a1a;
+            border-right: 1px solid #3e3e42;
+            padding: 15px 5px;
+            font-size: 14px;
+            line-height: 1.5;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #858585;
+            text-align: right;
+            user-select: none;
+            overflow: hidden;
+            z-index: 3;
+            white-space: pre;
+        }
+
+        #editor,
+        #highlight {
+            position: absolute;
+            top: 0;
+            left: 50px;
+            width: calc(100% - 50px);
+            height: 100%;
+            margin: 0;
+            padding: 15px;
+            border: 0;
+            font-size: 14px;
+            line-height: 1.5;
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre;
+            word-wrap: normal;
+            overflow: auto;
+        }
+
+        #editor {
+            background: transparent;
+            color: transparent;
+            caret-color: #d4d4d4;
+            outline: none;
+            resize: none;
+            z-index: 2;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #editor::selection {
+            background: rgba(38, 79, 120, 0.5);
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #editor::-moz-selection {
+            background: rgba(38, 79, 120, 0.5);
+            color: transparent;
+        }
+
+        #highlight {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        #highlight code {
+            display: block;
+            margin: 0;
+            padding: 0;
+            font-family: 'Consolas', 'Monaco', monospace !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            white-space: pre;
+        }
+
+        .keyword {
+            color: #569cd6;
+        }
+
+        .string {
+            color: #ce9178;
+        }
+
+        .number {
+            color: #b5cea8;
+        }
+
+        .comment {
+            color: #6a9955;
+        }
+
+        .function {
+            color: #dcdcaa;
+        }
+
+        .operator {
+            color: #d4d4d4;
+        }
+
+        .output-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #252526;
+            overflow: auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        canvas {
+            border: 1px solid #3e3e42;
+            background: white;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #canvas3d {
+            background: #1a1a1a;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .canvas-container.console-only {
+            display: none;
+        }
+
+        .resizer {
+            height: 5px;
+            background: #2d2d30;
+            cursor: ns-resize;
+            position: relative;
+            z-index: 10;
+        }
+
+        .resizer:hover {
+            background: #007acc;
+        }
+
+        .resizer:active {
+            background: #007acc;
+        }
+
+        .editor-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .code-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
+        }
+
+        .horizontal-resizer {
+            height: 5px;
+            background: #2d2d30;
+            cursor: ns-resize;
+            z-index: 10;
+        }
+
+        .horizontal-resizer:hover,
+        .horizontal-resizer:active {
+            background: #007acc;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+            border-top: 1px solid #3e3e42;
+            min-height: 100px;
+            height: 200px;
+        }
+
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .input-toolbar button {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        .input-toolbar button.small {
+            padding: 3px 8px;
+        }
+
+        .input-toolbar label {
+            font-size: 13px;
+        }
+
+        #inputData {
+            flex: 1;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            border: none;
+            outline: none;
+            resize: none;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .console {
+            height: 150px;
+            background: #1e1e1e;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .console-line {
+            margin-bottom: 5px;
+        }
+
+        .console-line.error {
+            color: #f48771;
+        }
+
+        .console-line.output {
+            color: #4fc1ff;
+        }
+
+        select {
+            background: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            padding: 6px 10px;
+            font-size: 13px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* Help Modal */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .help-content {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            max-width: 900px;
+            max-height: 90vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .help-header {
+            background: #2d2d30;
+            padding: 15px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .help-header h2 {
+            color: #4ec9b0;
+            font-size: 18px;
+        }
+
+        .help-close {
+            background: #f48771;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .help-search {
+            padding: 15px 20px;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .help-search input {
+            width: 100%;
+            background: #3c3c3c;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .help-body {
+            overflow-y: auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .help-category {
+            margin-bottom: 25px;
+        }
+
+        .help-category h3 {
+            color: #ce9178;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #3e3e42;
+            padding-bottom: 5px;
+        }
+
+        .help-function {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #252526;
+            border-radius: 3px;
+        }
+
+        .help-function code {
+            color: #4ec9b0;
+            background: #1e1e1e;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 13px;
+        }
+
+        .help-function-name {
+            font-weight: bold;
+            color: #dcdcaa;
+            margin-bottom: 5px;
+        }
+
+        .help-function-desc {
+            color: #9cdcfe;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        /* Autocomplete */
+        .autocomplete {
+            position: absolute;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            min-width: 200px;
+        }
+
+        .autocomplete-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid #2d2d30;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: #2d2d30;
+        }
+
+        .autocomplete-name {
+            color: #dcdcaa;
+            font-weight: bold;
+        }
+
+        .autocomplete-args {
+            color: #9cdcfe;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+
+        .autocomplete-desc {
+            color: #6a9955;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        /* Function hint tooltip */
+        .function-hint {
+            position: absolute;
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            padding: 8px 12px;
+            z-index: 99;
+            display: none;
+            max-width: 400px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .function-hint-name {
+            color: #dcdcaa;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .function-hint-args {
+            color: #9cdcfe;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .function-hint-desc {
+            color: #6a9955;
+            font-size: 11px;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Help Modal -->
+    <div id="helpModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h2>📖 GridLang Built-in Functions</h2>
+                <button class="help-close" id="helpCloseBtn">Close</button>
+            </div>
+            <div class="help-search">
+                <input type="text" id="helpSearch" placeholder="Search functions... (e.g., 'animate', 'grid', 'voxel')">
+            </div>
+            <div class="help-body" id="helpBody"></div>
+        </div>
+    </div>
+
+    <header>
+        <h1>GridLang 🎨 Visual Scripting Language</h1>
+    </header>
+
+    <div class="container">
+        <div class="editor-panel">
+            <div class="toolbar">
+                <select id="exampleSelect" title="Choose an example">
+                    <option value="">Choose an example...</option>
+                    <option value="hello">Hello World</option>
+                    <option value="input_demo">Input Data Demo</option>
+                    <option value="grid">Simple Grid</option>
+                    <option value="checkerboard">Checkerboard</option>
+                    <option value="spiral">Spiral Pattern</option>
+                    <option value="wave_animation">🎬 Wave Animation</option>
+                    <option value="bouncing_ball">🎬 Bouncing Ball</option>
+                    <option value="recursive">Recursive Factorial</option>
+                    <option value="benchmark">Benchmarking</option>
+                    <option value="cube3d">3D Cube</option>
+                    <option value="checker3d">3D Checkerboard</option>
+                    <option value="spiral3d">3D Spiral Tower</option>
+                    <option value="rotating_cube">🎬 3D Wave Animation</option>
+                    <option value="mandelbrot">Mandelbrot Set</option>
+                </select>
+                <button id="runBtn" title="Run (Ctrl+Enter)">▶</button>
+                <button id="stopBtn" class="clear" style="display:none;" title="Stop">⏹</button>
+                <button id="clearBtn" class="clear" title="Clear Canvas">🗑</button>
+                <button id="statsBtn" class="clear" title="Toggle Stats">📊</button>
+                <button id="helpBtn" title="Help">❓</button>
+            </div>
+
+            <div class="editor-content">
+                <div class="code-section">
+                    <div class="editor-container">
+                        <div id="lineNumbers" class="line-numbers"></div>
+                        <pre id="highlight" aria-hidden="true"><code class="language-python"></code></pre>
+                        <textarea id="editor" spellcheck="false"># Welcome to GridLang!
+# Try examples from the dropdown or press F1 for help
+# Use Ctrl+Space for autocomplete
+
+init_2d(20, 20)
+
+for i in range(20) {
+    for j in range(20) {
+        if (i + j) % 2 == 0 {
+            set_cell(i, j, "#4ec9b0")
+        } else {
+            set_cell(i, j, "#ce9178")
+        }
+    }
+}
+
+print("Pattern complete!")</textarea>
+                        <div class="autocomplete" id="autocomplete"></div>
+                        <div class="function-hint" id="functionHint"></div>
+                    </div>
+                </div>
+
+                <div class="horizontal-resizer" id="horizontalResizer"></div>
+
+                <div class="input-section" id="inputSection">
+                    <div class="input-toolbar">
+                        <label>Input:</label>
+                        <select id="inputSelect">
+                            <option value="default">Default</option>
+                        </select>
+                        <button id="addInputBtn" class="small">+ Add</button>
+                        <button id="renameInputBtn" class="small">Rename</button>
+                        <button id="deleteInputBtn" class="small">Delete</button>
+                    </div>
+                    <textarea id="inputData" placeholder="Paste your input data here..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="output-panel">
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="canvas"></canvas>
+                <canvas id="canvas3d"></canvas>
+            </div>
+            <div class="resizer" id="resizer"></div>
+            <div class="console" id="console"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="stats.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="lexer.js"></script>
+    <script src="parser.js"></script>
+    <script src="renderer3d.js"></script>
+    <script src="gridlang.js"></script>
+    <script src="ui.js"></script>
+</body>
+
+</html>
