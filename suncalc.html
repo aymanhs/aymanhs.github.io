@@ -66,7 +66,7 @@
                 <span class="animate-pulse">●</span> Locating...
             </p>
         </div>
-        <div class="absolute top-4 right-4 pointer-events-none text-right">
+        <div id="north-indicator" class="absolute top-4 right-4 text-right cursor-pointer hover:opacity-80 transition-opacity" title="Click for top view">
             <div class="text-xs text-slate-400 uppercase tracking-wider">North</div>
             <div
                 class="w-8 h-8 border-2 border-slate-600 rounded-full flex items-center justify-center bg-slate-800/50">
@@ -90,10 +90,6 @@
                     <div id="display-time" class="text-3xl font-bold text-white font-mono">--:--</div>
                 </div>
                 <div class="flex gap-2">
-                    <button id="top-view-btn"
-                        class="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs font-bold rounded shadow transition-colors">
-                        TOP VIEW
-                    </button>
                     <button id="reset-btn"
                         class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition-colors">
                         JUMP TO NOW
@@ -212,7 +208,7 @@
         const timeSlider = document.getElementById('time-slider');
         const displayTimeEl = document.getElementById('display-time');
         const resetBtn = document.getElementById('reset-btn');
-        const topViewBtn = document.getElementById('top-view-btn');
+        const northIndicator = document.getElementById('north-indicator');
         const dateSlider = document.getElementById('date-slider');
         const displayDateEl = document.getElementById('display-date');
         const todayBtn = document.getElementById('today-btn');
@@ -294,21 +290,31 @@
             const zoomSpeed = 0.05;
             // Adjust radius based on scroll delta
             cameraRadius += e.deltaY * zoomSpeed;
-            // Clamp zoom
-            cameraRadius = Math.max(10, Math.min(100, cameraRadius));
+            // Clamp zoom - allow zooming out much further (up to 200)
+            cameraRadius = Math.max(10, Math.min(200, cameraRadius));
             updateCameraPosition();
         });
 
-        // Touch support
+        // Touch support with pinch-to-zoom
+        let lastTouchDistance = null;
+
         container.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
+            if (e.touches.length === 1) {
                 isDragging = true;
                 previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
             }
         });
-        container.addEventListener('touchend', () => isDragging = false);
+        container.addEventListener('touchend', () => {
+            isDragging = false;
+            lastTouchDistance = null;
+        });
         container.addEventListener('touchmove', (e) => {
-            if (isDragging && e.touches.length > 0) {
+            if (e.touches.length === 1 && isDragging) {
                 const deltaX = e.touches[0].clientX - previousMousePosition.x;
                 const deltaY = e.touches[0].clientY - previousMousePosition.y;
 
@@ -318,6 +324,20 @@
 
                 updateCameraPosition();
                 previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2 && lastTouchDistance !== null) {
+                // Pinch to zoom
+                e.preventDefault();
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                const delta = lastTouchDistance - distance;
+                cameraRadius += delta * 0.1;
+                // Clamp zoom - allow zooming out much further (up to 200)
+                cameraRadius = Math.max(10, Math.min(200, cameraRadius));
+                
+                lastTouchDistance = distance;
+                updateCameraPosition();
             }
         });
 
@@ -776,8 +796,11 @@
         cardDusk.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).dusk));
         cardIshaa.addEventListener('click', () => setTimeTo(SunCalc.getTimes(new Date(), userLat, userLon).night));
 
-        topViewBtn.addEventListener('click', () => {
+        northIndicator.addEventListener('click', () => {
+            // Set camera to top view (looking straight down)
             cameraElevation = Math.PI / 2;
+            // Align north to the top of the screen (azimuth = 0 means camera looks from south towards north)
+            cameraAzimuth = 0;
             updateCameraPosition();
         });
 
