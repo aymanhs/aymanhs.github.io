@@ -60,11 +60,29 @@
 
     <!-- 3D Visualization Area -->
     <div id="canvas-container" class="relative">
-        <div class="absolute top-4 left-4 pointer-events-none">
+        <div class="absolute top-4 left-4 pointer-events-auto z-10">
             <h1 class="text-2xl font-bold text-white drop-shadow-md">Sun Tracker</h1>
             <p id="location-status" class="text-sm text-emerald-400 font-medium flex items-center gap-2">
                 <span class="animate-pulse">●</span> Locating...
             </p>
+            <select id="city-selector" class="mt-2 px-3 py-1 bg-slate-800/90 text-white text-xs rounded border border-slate-600 hover:border-slate-500 cursor-pointer focus:outline-none focus:border-emerald-400">
+                <option value="browser">📍 Use Browser Location</option>
+                <option value="26.0667,50.5577">🇧🇭 Bahrain</option>
+                <option value="51.5074,-0.1278">🇬🇧 London</option>
+                <option value="40.7128,-74.0060">🇺🇸 New York City</option>
+                <option value="34.0522,-118.2437">🇺🇸 Los Angeles</option>
+                <option value="35.6762,139.6503">🇯🇵 Tokyo</option>
+                <option value="48.8566,2.3522">🇫🇷 Paris</option>
+                <option value="-33.8688,151.2093">🇦🇺 Sydney</option>
+                <option value="55.7558,37.6173">🇷🇺 Moscow</option>
+                <option value="39.9042,116.4074">🇨🇳 Beijing</option>
+                <option value="19.4326,-99.1332">🇲🇽 Mexico City</option>
+                <option value="25.2048,55.2708">🇦🇪 Dubai</option>
+                <option value="21.3099,39.8208">🇸🇦 Mecca</option>
+                <option value="1.3521,103.8198">🇸🇬 Singapore</option>
+                <option value="-23.5505,-46.6333">🇧🇷 São Paulo</option>
+                <option value="52.5200,13.4050">🇩🇪 Berlin</option>
+            </select>
         </div>
         <div id="north-indicator" class="absolute top-4 right-4 text-right cursor-pointer hover:opacity-80 transition-opacity" title="Click for top view">
             <div class="text-xs text-slate-400 uppercase tracking-wider">North</div>
@@ -205,6 +223,7 @@
 
         // --- DOM Elements ---
         const locationStatus = document.getElementById('location-status');
+        const citySelector = document.getElementById('city-selector');
         const timeSlider = document.getElementById('time-slider');
         const displayTimeEl = document.getElementById('display-time');
         const resetBtn = document.getElementById('reset-btn');
@@ -802,6 +821,52 @@
             // Align north to the top of the screen (azimuth = 0 means camera looks from south towards north)
             cameraAzimuth = 0;
             updateCameraPosition();
+        });
+
+        citySelector.addEventListener('change', (e) => {
+            const value = e.target.value;
+            
+            if (value === 'browser') {
+                // Use browser location
+                if ("geolocation" in navigator) {
+                    locationStatus.innerHTML = `<span class="animate-pulse">●</span> Locating...`;
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            userLat = position.coords.latitude;
+                            userLon = position.coords.longitude;
+                            locationStatus.innerHTML = `<span class="text-emerald-400">●</span> ${userLat.toFixed(2)}, ${userLon.toFixed(2)}`;
+                            
+                            updateSolarTimes(currentDate);
+                            updateSunPosition(currentDate);
+                            updateSunPath(currentDate);
+                            updateSeasonLine(currentDate);
+                            updateMoonPath(currentDate);
+                            updateMoonPosition(currentDate);
+                        },
+                        (error) => {
+                            locationStatus.innerHTML = `<span class="text-orange-400">⚠</span> Location denied`;
+                            console.log("Geolocation error:", error);
+                        }
+                    );
+                } else {
+                    locationStatus.innerHTML = `<span class="text-orange-400">⚠</span> Geolocation not supported`;
+                }
+            } else {
+                // Use selected city
+                const [lat, lon] = value.split(',').map(parseFloat);
+                userLat = lat;
+                userLon = lon;
+                
+                const cityName = e.target.options[e.target.selectedIndex].text.split(' ').slice(1).join(' ');
+                locationStatus.innerHTML = `<span class="text-emerald-400">●</span> ${cityName}`;
+                
+                updateSolarTimes(currentDate);
+                updateSunPosition(currentDate);
+                updateSunPath(currentDate);
+                updateSeasonLine(currentDate);
+                updateMoonPath(currentDate);
+                updateMoonPosition(currentDate);
+            }
         });
 
         dateSlider.addEventListener('input', (e) => {
