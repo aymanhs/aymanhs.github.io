@@ -788,7 +788,7 @@ function jumpToLine(lineNumber) {
 // Override Prism to highlight our built-in functions and keywords
 Prism.languages.insertBefore('python', 'function', {
     'builtin-function': {
-        pattern: /\b(print|range|len|append|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|time|clock|benchmark|animate|stop_animation|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid)(?=\s*\()/,
+        pattern: /\b(print|range|len|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|time|clock|benchmark|animate|stop_animation|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid)(?=\s*\()/,
         alias: 'function'
     }
 });
