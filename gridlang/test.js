@@ -8,6 +8,7 @@
 // Load GridLang modules
 const { Lexer, TokenType } = require('./lexer.js');
 const { Parser } = require('./parser.js');
+const { Interpreter } = require('./gridlang.js');
 
 // Test framework
 class TestRunner {
@@ -71,6 +72,29 @@ function parse(code) {
     const program = parser.parse();
     // Return the body for easier testing
     return program.body;
+}
+
+function evaluate(code) {
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    
+    // Create mock console that captures output
+    const mockConsole = { 
+        innerHTML: '', 
+        scrollTop: 0, 
+        scrollHeight: 0 
+    };
+    
+    const interp = new Interpreter(null, null, mockConsole, null, '', null);
+    interp.run(ast);
+    
+    // Return both the interpreter (for variable access) and console output
+    return {
+        env: interp.globalEnv,
+        output: mockConsole.innerHTML.replace(/<[^>]+>/g, '').trim().split('\n').filter(x => x)
+    };
 }
 
 // Test Suite
@@ -497,6 +521,407 @@ runner.test('Regex: mixed named and complex patterns', () => {
     const ast = parse('pattern = r"(?<protocol>https?)://(?<domain>[\\w.]+)"\ngroups = pattern.groups("https://example.com")');
     assertEqual(ast.length, 2);
     assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+// ========== RUNTIME EVALUATION TESTS ==========
+runner.test('Runtime: Basic arithmetic', () => {
+    const result = evaluate('x = 5 + 3 * 2\nprint(x)');
+    assertArrayEqual(result.output, ['11']);
+    assertEqual(result.env.get('x'), 11);
+});
+
+runner.test('Runtime: String operations', () => {
+    const result = evaluate('s = "hello" + " " + "world"\nprint(s)');
+    assertArrayEqual(result.output, ['hello world']);
+});
+
+runner.test('Runtime: Array operations', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(len(arr))\nprint(arr[1])');
+    assertArrayEqual(result.output, ['3', '2']);
+});
+
+runner.test('Runtime: Map/Object dot notation', () => {
+    const result = evaluate('person = {name: "Alice", age: 30}\nprint(person.name)\nprint(person.age)');
+    assertArrayEqual(result.output, ['Alice', '30']);
+});
+
+runner.test('Runtime: Map bracket notation', () => {
+    const result = evaluate('person = {city: "NYC"}\nkey = "city"\nprint(person[key])\nprint(person["city"])');
+    assertArrayEqual(result.output, ['NYC', 'NYC']);
+});
+
+runner.test('Runtime: Map assignment', () => {
+    const result = evaluate('obj = {x: 1}\nobj.x = 5\nobj["y"] = 10\nprint(obj.x)\nprint(obj.y)');
+    assertArrayEqual(result.output, ['5', '10']);
+});
+
+runner.test('Runtime: Nested object access', () => {
+    const result = evaluate('data = {user: {name: "Bob", score: 100}}\nprint(data.user.name)\nprint(data["user"]["score"])');
+    assertArrayEqual(result.output, ['Bob', '100']);
+});
+
+runner.test('Runtime: If-else control flow', () => {
+    const result = evaluate('x = 10\nif x > 5 { print("big") } else { print("small") }');
+    assertArrayEqual(result.output, ['big']);
+});
+
+runner.test('Runtime: For loop', () => {
+    const result = evaluate('for i in [1, 2, 3] { print(i) }');
+    assertArrayEqual(result.output, ['1', '2', '3']);
+});
+
+runner.test('Runtime: While loop', () => {
+    const result = evaluate('x = 0\nwhile x < 3 { print(x)\nx = x + 1 }');
+    assertArrayEqual(result.output, ['0', '1', '2']);
+});
+
+runner.test('Runtime: Function definition and call', () => {
+    const result = evaluate('func double(x) { return x * 2 }\ny = double(5)\nprint(y)');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('Runtime: Regex test() method', () => {
+    const result = evaluate('pattern = r"\\d+"\nprint(pattern.test("hello123"))\nprint(pattern.test("hello"))');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('Runtime: Regex match() method', () => {
+    const result = evaluate('pattern = r"\\d+"\nmatch = pattern.match("abc123def")\nprint(match)');
+    assertArrayEqual(result.output, ['123']);
+});
+
+runner.test('Runtime: Regex groups() method', () => {
+    const result = evaluate('coords = r"(\\d+),(\\d+)"\ngroups = coords.groups("Point: 10,20")\nprint(groups[0])\nprint(groups[1])');
+    assertArrayEqual(result.output, ['10', '20']);
+});
+
+runner.test('Runtime: Regex find_all() method', () => {
+    const result = evaluate('numbers = r"\\d+"\nmatches = numbers.find_all("a1b2c3")\nfor m in matches { print(m) }');
+    assertArrayEqual(result.output, ['1', '2', '3']);
+});
+
+runner.test('Runtime: Regex replace() method', () => {
+    const result = evaluate('numbers = r"\\d+"\nresult = numbers.replace("a1b2c3", "X")\nprint(result)');
+    assertArrayEqual(result.output, ['aXbXcX']);
+});
+
+runner.test('Runtime: Regex split() method', () => {
+    const result = evaluate('words = r"\\s+"\nparts = words.split("hello  world   foo")\nfor part in parts { print(part) }');
+    assertArrayEqual(result.output, ['hello', 'world', 'foo']);
+});
+
+runner.test('Runtime: Named groups as object', () => {
+    const result = evaluate('date = r"(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})"\ngroups = date.groups("2025-12-01")\nprint(groups.year)\nprint(groups.month)\nprint(groups["day"])');
+    assertArrayEqual(result.output, ['2025', '12', '01']);
+});
+
+runner.test('Runtime: Named groups with coordinates', () => {
+    const result = evaluate('coords = r"x=(?<x>-?\\d+), y=(?<y>-?\\d+)"\ngroups = coords.groups("x=10, y=-20")\nprint(groups.x)\nprint(groups.y)');
+    assertArrayEqual(result.output, ['10', '-20']);
+});
+
+runner.test('Runtime: Named groups log parsing', () => {
+    const result = evaluate('log = r"\\[(?<level>\\w+)\\] (?<time>[\\d:]+) - (?<message>.+)"\ngroups = log.groups("[ERROR] 12:34:56 - Connection timeout")\nprint(groups.level)\nprint(groups.time)');
+    assertArrayEqual(result.output, ['ERROR', '12:34:56']);
+});
+
+runner.test('Runtime: Positional groups still work', () => {
+    const result = evaluate('game = r"Game (\\d+): (.+)"\ngroups = game.groups("Game 123: 4 red")\nprint(groups[0])\nprint(groups[1])');
+    assertArrayEqual(result.output, ['123', '4 red']);
+});
+
+runner.test('Runtime: Complex nested computation', () => {
+    const result = evaluate('func fib(n) { if n <= 1 { return n } else { return fib(n-1) + fib(n-2) } }\nprint(fib(10))');
+    assertArrayEqual(result.output, ['55']);
+});
+
+runner.test('Runtime: Logical operators', () => {
+    const result = evaluate('print(true and false)\nprint(true or false)\nprint(not true)');
+    assertArrayEqual(result.output, ['false', 'true', 'false']);
+});
+
+runner.test('Runtime: Comparison operators', () => {
+    const result = evaluate('print(5 > 3)\nprint(5 < 3)\nprint(5 == 5)\nprint(5 != 3)');
+    assertArrayEqual(result.output, ['true', 'false', 'true', 'true']);
+});
+
+runner.test('Runtime: Power operator', () => {
+    const result = evaluate('print(2 ** 3)\nprint(5 ** 2)');
+    assertArrayEqual(result.output, ['8', '25']);
+});
+
+runner.test('Runtime: String length', () => {
+    const result = evaluate('s = "hello"\nprint(len(s))');
+    assertArrayEqual(result.output, ['5']);
+});
+
+runner.test('Runtime: Array length', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(len(arr))');
+    assertArrayEqual(result.output, ['3']);
+});
+
+// ========== BUILTIN FUNCTIONS TESTS ==========
+
+// Math functions
+runner.test('Runtime: abs() function', () => {
+    const result = evaluate('print(abs(-5))\nprint(abs(3.14))');
+    assertArrayEqual(result.output, ['5', '3.14']);
+});
+
+runner.test('Runtime: sqrt() function', () => {
+    const result = evaluate('print(sqrt(16))\nprint(sqrt(2))');
+    assertEqual(result.output[0], '4');
+    assert(result.output[1].startsWith('1.41'));
+});
+
+runner.test('Runtime: pow() function', () => {
+    const result = evaluate('print(pow(2, 3))\nprint(pow(5, 2))');
+    assertArrayEqual(result.output, ['8', '25']);
+});
+
+runner.test('Runtime: floor/ceil/round functions', () => {
+    const result = evaluate('print(floor(3.7))\nprint(ceil(3.2))\nprint(round(3.5))');
+    assertArrayEqual(result.output, ['3', '4', '4']);
+});
+
+runner.test('Runtime: min/max functions', () => {
+    const result = evaluate('print(min(5, 2, 8, 1))\nprint(max(5, 2, 8, 1))');
+    assertArrayEqual(result.output, ['1', '8']);
+});
+
+runner.test('Runtime: trigonometry functions', () => {
+    const result = evaluate('print(sin(0))\nprint(cos(0))\nprint(tan(0))');
+    assertArrayEqual(result.output, ['0', '1', '0']);
+});
+
+runner.test('Runtime: random() function', () => {
+    const result = evaluate('r = random()\nprint(r >= 0 and r < 1)');
+    assertArrayEqual(result.output, ['true']);
+});
+
+// Range function
+runner.test('Runtime: range() with single arg', () => {
+    const result = evaluate('for i in range(3) { print(i) }');
+    assertArrayEqual(result.output, ['0', '1', '2']);
+});
+
+runner.test('Runtime: range() with start and end', () => {
+    const result = evaluate('for i in range(5, 8) { print(i) }');
+    assertArrayEqual(result.output, ['5', '6', '7']);
+});
+
+runner.test('Runtime: range() with step', () => {
+    const result = evaluate('for i in range(0, 10, 2) { print(i) }');
+    assertArrayEqual(result.output, ['0', '2', '4', '6', '8']);
+});
+
+// Type conversion
+runner.test('Runtime: str() conversion', () => {
+    const result = evaluate('print(str(123))\nprint(str(true))\nprint(str([1,2,3]))');
+    assertArrayEqual(result.output, ['123', 'true', '[1, 2, 3]']);
+});
+
+runner.test('Runtime: int() conversion', () => {
+    const result = evaluate('print(int(3.7))\nprint(int("42"))\nprint(int(true))');
+    assertArrayEqual(result.output, ['3', '42', '1']);
+});
+
+runner.test('Runtime: float() conversion', () => {
+    const result = evaluate('print(float(5))\nprint(float("3.14"))\nprint(float(true))');
+    assertArrayEqual(result.output, ['5', '3.14', '1']);
+});
+
+runner.test('Runtime: bool() conversion', () => {
+    const result = evaluate('print(bool(1))\nprint(bool(0))\nprint(bool(""))');
+    assertArrayEqual(result.output, ['true', 'false', 'false']);
+});
+
+// String functions
+runner.test('Runtime: substr() function', () => {
+    const result = evaluate('s = "hello world"\nprint(substr(s, 6))\nprint(substr(s, 0, 5))');
+    assertArrayEqual(result.output, ['world', 'hello']);
+});
+
+runner.test('Runtime: slice() function', () => {
+    const result = evaluate('s = "hello"\nprint(slice(s, 1, 4))\narr = [1,2,3,4,5]\nprint(slice(arr, 2, 4)[0])');
+    assertArrayEqual(result.output, ['ell', '3']);
+});
+
+runner.test('Runtime: split() and join()', () => {
+    const result = evaluate('parts = split("a,b,c", ",")\nprint(len(parts))\nprint(join(parts, "-"))');
+    assertArrayEqual(result.output, ['3', 'a-b-c']);
+});
+
+runner.test('Runtime: upper() and lower()', () => {
+    const result = evaluate('print(upper("hello"))\nprint(lower("WORLD"))');
+    assertArrayEqual(result.output, ['HELLO', 'world']);
+});
+
+runner.test('Runtime: trim() function', () => {
+    const result = evaluate('s = "  hello  "\nprint(trim(s))');
+    assertArrayEqual(result.output, ['hello']);
+});
+
+runner.test('Runtime: replace() function', () => {
+    const result = evaluate('s = "hello world"\nprint(replace(s, "o", "0"))');
+    assertArrayEqual(result.output, ['hell0 w0rld']);
+});
+
+runner.test('Runtime: starts_with() and ends_with()', () => {
+    const result = evaluate('s = "hello"\nprint(starts_with(s, "he"))\nprint(ends_with(s, "lo"))');
+    assertArrayEqual(result.output, ['true', 'true']);
+});
+
+runner.test('Runtime: contains() function', () => {
+    const result = evaluate('print(contains("hello", "ell"))\nprint(contains([1,2,3], 2))');
+    assertArrayEqual(result.output, ['true', 'true']);
+});
+
+runner.test('Runtime: index_of() function', () => {
+    const result = evaluate('print(index_of("hello", "l"))\nprint(index_of([1,2,3], 2))');
+    assertArrayEqual(result.output, ['2', '1']);
+});
+
+runner.test('Runtime: char_at() and char_code()', () => {
+    const result = evaluate('s = "hello"\nprint(char_at(s, 1))\nprint(char_code(s, 0))');
+    assertArrayEqual(result.output, ['e', '104']);
+});
+
+runner.test('Runtime: from_char_code() function', () => {
+    const result = evaluate('print(from_char_code(65))\nprint(from_char_code(72))');
+    assertArrayEqual(result.output, ['A', 'H']);
+});
+
+runner.test('Runtime: repeat() function', () => {
+    const result = evaluate('print(repeat("ab", 3))');
+    assertArrayEqual(result.output, ['ababab']);
+});
+
+runner.test('Runtime: reverse() function', () => {
+    const result = evaluate('print(reverse("hello"))\narr = [1,2,3]\nprint(reverse(arr)[0])');
+    assertArrayEqual(result.output, ['olleh', '3']);
+});
+
+// Array functions
+runner.test('Runtime: append() function', () => {
+    const result = evaluate('arr = [1, 2, 3]\nappend(arr, 4)\nprint(len(arr))\nprint(arr[3])');
+    assertArrayEqual(result.output, ['4', '4']);
+});
+
+runner.test('Runtime: len() with Map', () => {
+    const result = evaluate('m = {a: 1, b: 2, c: 3}\nprint(len(m))');
+    assertArrayEqual(result.output, ['3']);
+});
+
+// Color helpers
+runner.test('Runtime: rgb() function', () => {
+    const result = evaluate('c = rgb(255, 0, 0)\nprint(c)');
+    assertArrayEqual(result.output, ['rgb(255, 0, 0)']);
+});
+
+runner.test('Runtime: hsl() function', () => {
+    const result = evaluate('c = hsl(180, 70, 50)\nprint(c)');
+    assertArrayEqual(result.output, ['hsl(180, 70%, 50%)']);
+});
+
+// Input functions (with mock data)
+runner.test('Runtime: input_string() function', () => {
+    const code = 'data = input_string()\nprint(len(data) > 0)';
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, 'test data', null);
+    interp.run(ast);
+    const output = mockConsole.innerHTML.replace(/<[^>]+>/g, '').trim().split('\n').filter(x => x);
+    assertArrayEqual(output, ['true']);
+});
+
+runner.test('Runtime: input_lines() function', () => {
+    const code = 'lines = input_lines()\nprint(len(lines))';
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, 'line1\nline2\nline3', null);
+    interp.run(ast);
+    const output = mockConsole.innerHTML.replace(/<[^>]+>/g, '').trim().split('\n').filter(x => x);
+    assertArrayEqual(output, ['3']);
+});
+
+runner.test('Runtime: input_grid() function', () => {
+    const code = 'grid = input_grid()\nprint(len(grid))\nprint(len(grid[0]))';
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, 'abc\ndef\nghi', null);
+    interp.run(ast);
+    const output = mockConsole.innerHTML.replace(/<[^>]+>/g, '').trim().split('\n').filter(x => x);
+    assertArrayEqual(output, ['3', '3']);
+});
+
+// Debug functions
+runner.test('Runtime: debug() and set_debug()', () => {
+    const result = evaluate('set_debug(true)\ndebug("test")\nset_debug(false)\ndebug("hidden")');
+    assertEqual(result.output.length, 1);
+    assertEqual(result.output[0], 'test');
+});
+
+// Modulo operator
+runner.test('Runtime: modulo operator', () => {
+    const result = evaluate('print(10 % 3)\nprint(7 % 2)');
+    assertArrayEqual(result.output, ['1', '1']);
+});
+
+// Multi-dimensional arrays
+runner.test('Runtime: 2D array access', () => {
+    const result = evaluate('matrix = [[1,2],[3,4]]\nprint(matrix[0][1])\nprint(matrix[1][0])');
+    assertArrayEqual(result.output, ['2', '3']);
+});
+
+runner.test('Runtime: 2D array assignment', () => {
+    const result = evaluate('matrix = [[1,2],[3,4]]\nmatrix[0][1] = 99\nprint(matrix[0][1])');
+    assertArrayEqual(result.output, ['99']);
+});
+
+// Null handling
+runner.test('Runtime: null value', () => {
+    const result = evaluate('x = null\nprint(x == null)\nprint(str(x))');
+    assertArrayEqual(result.output, ['true', 'null']);
+});
+
+// Boolean literals
+runner.test('Runtime: boolean values', () => {
+    const result = evaluate('print(true)\nprint(false)\nprint(true and false)');
+    assertArrayEqual(result.output, ['true', 'false', 'false']);
+});
+
+// Unary minus
+runner.test('Runtime: unary minus', () => {
+    const result = evaluate('x = 5\nprint(-x)\nprint(-(-3))');
+    assertArrayEqual(result.output, ['-5', '3']);
+});
+
+// Return statement
+runner.test('Runtime: early return', () => {
+    const result = evaluate('func test() { return 42\nprint("unreachable") }\nprint(test())');
+    assertArrayEqual(result.output, ['42']);
+});
+
+// Nested functions
+runner.test('Runtime: nested function calls', () => {
+    const result = evaluate('func add(a, b) { return a + b }\nfunc mul(a, b) { return a * b }\nprint(mul(add(2, 3), 4))');
+    assertArrayEqual(result.output, ['20']);
+});
+
+// Variable scoping
+runner.test('Runtime: function local scope', () => {
+    const result = evaluate('x = 10\nfunc test() { x = 20\nreturn x }\nprint(test())\nprint(x)');
+    assertArrayEqual(result.output, ['20', '20']);
 });
 
 // ========== STRESS TESTS ==========

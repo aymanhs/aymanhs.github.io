@@ -105,7 +105,7 @@ class Interpreter {
     constructor(canvas, canvas3d, consoleElement, renderer3d, inputData, canvasContainer) {
         this.canvas = canvas;
         this.canvas3d = canvas3d;
-        this.ctx = canvas.getContext('2d');
+        this.ctx = canvas ? canvas.getContext('2d') : null;
         this.consoleElement = consoleElement;
         this.renderer3d = renderer3d;
         this.inputData = inputData || '';
@@ -1008,5 +1008,10 @@ class Interpreter {
         if (value === 0 || value === '') return false;
         return true;
     }
+}
+
+// Export for Node.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Interpreter };
 }
 
