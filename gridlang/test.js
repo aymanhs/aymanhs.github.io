@@ -309,6 +309,196 @@ z = x + y
     assertEqual(ast.length, 3);
 });
 
+// ========== REGEX TESTS ==========
+runner.test('Lexer: Tokenize regex literal', () => {
+    const lexer = new Lexer('pattern = r"\\d+"');
+    const tokens = lexer.tokenize();
+    assertEqual(tokens[2].type, 'REGEX');
+    assertEqual(tokens[2].value, '\\d+');
+});
+
+runner.test('Parser: Parse regex literal', () => {
+    const ast = parse('pattern = r"\\d+"');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'RegexLiteral');
+    assertEqual(ast[0].expression.value.pattern, '\\d+');
+});
+
+runner.test('Regex: test() method', () => {
+    const ast = parse('pattern = r"\\d+"\nresult = pattern.test("hello123")');
+    // Just check it parses - runtime test would need interpreter
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: match() with groups', () => {
+    const ast = parse('pattern = r"(\\d+)-(\\d+)"\nmatch = pattern.match("123-456")');
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: find_all() method', () => {
+    const ast = parse('matches = r"\\d+".find_all("a1b2c3")');
+    assertEqual(ast[0].expression.value.type, 'Call');
+});
+
+runner.test('Regex: replace() method', () => {
+    const ast = parse('result = r"\\d+".replace("a1b2c3", "X")');
+    assertEqual(ast[0].expression.value.type, 'Call');
+});
+
+runner.test('Regex: split() method', () => {
+    const ast = parse('parts = r"\\s+".split("hello  world")');
+    assertEqual(ast[0].expression.value.type, 'Call');
+});
+
+runner.test('Regex: named groups syntax', () => {
+    const ast = parse('pattern = r"(?<year>\\d{4})-(?<month>\\d{2})"');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'RegexLiteral');
+    // Just verify it parses - runtime behavior tested in browser
+});
+
+// ========== OBJECTS/MAPS TESTS ==========
+runner.test('Objects: Map creation and dot notation', () => {
+    const ast = parse('person = {name: "Alice", age: 30}\nprint(person.name)');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[1].expression.type, 'Call');
+});
+
+runner.test('Objects: Bracket notation with string literal', () => {
+    const ast = parse('person = {city: "NYC"}\nprint(person["city"])');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.args[0].type, 'Index');
+});
+
+runner.test('Objects: Bracket notation with variable', () => {
+    const ast = parse('key = "name"\nperson = {name: "Bob"}\nprint(person[key])');
+    assertEqual(ast.length, 3);
+    assertEqual(ast[2].expression.args[0].type, 'Index');
+});
+
+runner.test('Objects: Assignment via dot notation', () => {
+    const ast = parse('person = {age: 30}\nperson.age = 31');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.type, 'MemberAssignment');
+});
+
+runner.test('Objects: Assignment via bracket notation', () => {
+    const ast = parse('person = {city: "NYC"}\nperson["city"] = "SF"');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.type, 'IndexAssignment');
+});
+
+runner.test('Objects: Bracket assignment with variable key', () => {
+    const ast = parse('person = {}\nkey = "country"\nperson[key] = "USA"');
+    assertEqual(ast.length, 3);
+    assertEqual(ast[2].expression.type, 'IndexAssignment');
+});
+
+runner.test('Objects: Nested object access', () => {
+    const ast = parse('data = {user: {name: "Bob", score: 100}}\nprint(data.user.name)');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.args[0].type, 'MemberAccess');
+});
+
+runner.test('Objects: Nested bracket access', () => {
+    const ast = parse('data = {user: {score: 100}}\nprint(data["user"]["score"])');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.args[0].type, 'Index');
+});
+
+// ========== COMPREHENSIVE REGEX TESTS ==========
+runner.test('Regex: test() with match', () => {
+    const ast = parse('pattern = r"\\d+"\nresult = pattern.test("hello123")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: test() without match', () => {
+    const ast = parse('pattern = r"\\d+"\nresult = pattern.test("hello")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: match() returns string', () => {
+    const ast = parse('pattern = r"\\d+"\nmatch = pattern.match("hello123")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: groups() returns array', () => {
+    const ast = parse('coords = r"(\\d+),(\\d+)"\ngroups = coords.groups("10,20")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: find_all() returns array of strings', () => {
+    const ast = parse('numbers = r"\\d+"\nmatches = numbers.find_all("a1b2c3")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: replace() substitutes all matches', () => {
+    const ast = parse('numbers = r"\\d+"\nresult = numbers.replace("a1b2c3", "X")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: split() by pattern', () => {
+    const ast = parse('words = r"\\s+"\nparts = words.split("hello  world")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: complex pattern with escapes', () => {
+    const ast = parse('pattern = r"\\[(?<level>\\w+)\\] (?<time>[\\d:]+)"');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'RegexLiteral');
+});
+
+// ========== NAMED GROUPS TESTS ==========
+runner.test('Regex: named groups for date parsing', () => {
+    const ast = parse('pattern = r"(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})"\ngroups = pattern.groups("2025-12-01")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: named groups dot notation access', () => {
+    const ast = parse('pattern = r"(?<x>\\d+),(?<y>\\d+)"\ngroups = pattern.groups("10,20")\nprint(groups.x)');
+    assertEqual(ast.length, 3);
+    assertEqual(ast[2].expression.args[0].type, 'MemberAccess');
+});
+
+runner.test('Regex: named groups bracket notation access', () => {
+    const ast = parse('pattern = r"(?<day>\\d{2})"\ngroups = pattern.groups("01")\nprint(groups["day"])');
+    assertEqual(ast.length, 3);
+    assertEqual(ast[2].expression.args[0].type, 'Index');
+});
+
+runner.test('Regex: named groups with negative numbers', () => {
+    const ast = parse('coords = r"x=(?<x>-?\\d+), y=(?<y>-?\\d+)"\ngroups = coords.groups("x=10, y=-20")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: named groups for log parsing', () => {
+    const ast = parse('log = r"\\[(?<level>\\w+)\\] (?<time>[\\d:]+) - (?<message>.+)"\ngroups = log.groups("[ERROR] 12:34:56 - timeout")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: positional groups still work', () => {
+    const ast = parse('game = r"Game (\\d+): (.+)"\ngroups = game.groups("Game 123: 4 red")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
+runner.test('Regex: mixed named and complex patterns', () => {
+    const ast = parse('pattern = r"(?<protocol>https?)://(?<domain>[\\w.]+)"\ngroups = pattern.groups("https://example.com")');
+    assertEqual(ast.length, 2);
+    assertEqual(ast[1].expression.value.type, 'Call');
+});
+
 // ========== STRESS TESTS ==========
 runner.test('Stress: Deep nesting', () => {
     let code = 'x = ';

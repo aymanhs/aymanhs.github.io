@@ -9,6 +9,67 @@ class ReturnValue {
     }
 }
 
+class Regex {
+    constructor(pattern) {
+        this.pattern = pattern;
+        try {
+            this.compiled = new RegExp(pattern);
+        } catch (e) {
+            throw new Error(`Invalid regex pattern: ${pattern}`);
+        }
+    }
+    
+    test(str) {
+        return this.compiled.test(String(str));
+    }
+    
+    match(str) {
+        const m = this.compiled.exec(String(str));
+        return m ? m[0] : null;
+    }
+    
+    groups(str) {
+        const m = this.compiled.exec(String(str));
+        if (!m) return null;
+        
+        // Check if there are named groups
+        if (m.groups && Object.keys(m.groups).length > 0) {
+            // Return Map object with named groups
+            const groupMap = new Map();
+            for (const [name, value] of Object.entries(m.groups)) {
+                groupMap.set(name, value);
+            }
+            return groupMap;
+        }
+        
+        // Return array for positional groups
+        return Array.from(m).slice(1);
+    }
+    
+    find_all(str) {
+        const global = new RegExp(this.pattern, 'g');
+        const matches = [];
+        let m;
+        while ((m = global.exec(String(str))) !== null) {
+            matches.push(m[0]);
+        }
+        return matches;
+    }
+    
+    replace(str, replacement) {
+        const global = new RegExp(this.pattern, 'g');
+        return String(str).replace(global, String(replacement));
+    }
+    
+    split(str) {
+        return String(str).split(this.compiled);
+    }
+    
+    toString() {
+        return `r"${this.pattern}"`;
+    }
+}
+
 class Environment {
     constructor(parent = null) {
         this.vars = {};
@@ -663,6 +724,7 @@ class Interpreter {
         if (typeof value === 'boolean') return value.toString();
         if (typeof value === 'number') return value.toString();
         if (typeof value === 'string') return value;
+        if (value instanceof Regex) return value.toString();
         if (Array.isArray(value)) return '[' + value.map(v => this.toString(v)).join(', ') + ']';
         if (value instanceof Map) {
             const pairs = [];
@@ -848,6 +910,16 @@ class Interpreter {
                 if (obj instanceof Map) {
                     return obj.get(property);
                 }
+                
+                // Handle Regex methods
+                if (obj instanceof Regex) {
+                    const method = obj[property];
+                    if (typeof method === 'function') {
+                        return method.bind(obj);
+                    }
+                    return null;
+                }
+                
                 return null;
             }
 
@@ -859,6 +931,9 @@ class Interpreter {
 
             case 'String':
                 return node.value;
+
+            case 'RegexLiteral':
+                return new Regex(node.pattern);
 
             case 'Boolean':
                 return node.value;

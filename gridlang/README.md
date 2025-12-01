@@ -210,6 +210,66 @@ repeat(str, count)                    # Repeat string n times
 reverse(str)                          # Reverse string or array
 ```
 
+### Regular Expressions
+```go
+# Create regex with r"..." literal (raw string - no escape processing)
+pattern = r"\d+"                      # Match one or more digits
+email = r"[\w.]+@[\w.]+\.[a-z]+"     # Match email pattern
+
+# Regex methods
+pattern.test(str)                     # Returns true/false if pattern matches
+pattern.match(str)                    # Returns matched string or null
+pattern.groups(str)                   # Returns array of capture groups or null
+pattern.find_all(str)                 # Returns array of all matched strings
+pattern.replace(str, replacement)     # Replace all matches with string
+pattern.split(str)                    # Split string by pattern
+
+# Named capture groups - groups() returns object instead of array
+date_pattern = r"(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})"
+groups = date_pattern.groups("2025-12-01")
+if groups {
+    print(groups.year)                 # "2025" - access by name!
+    print(groups.month)                # "12"
+    print(groups["day"])               # "01" - bracket notation works too
+}
+
+# Example: Parse Advent of Code input
+line = "Game 123: 4 red, 5 blue"
+game_pattern = r"Game (\d+): (.+)"
+groups = game_pattern.groups(line)
+if groups {
+    game_id = int(groups[0])           # Positional groups are arrays
+    colors = groups[1]
+}
+
+# Example: Parse coordinates with named groups
+coords = r"x=(?<x>-?\d+), y=(?<y>-?\d+)"
+text = "Point at x=10, y=-20"
+groups = coords.groups(text)
+if groups {
+    x = int(groups.x)                  # Named access
+    y = int(groups.y)
+    print("Position:", x, y)
+}
+
+# Example: Extract all numbers
+numbers = r"\d+"
+text = "Order #123 costs $45.99"
+for match in numbers.find_all(text) {
+    print(match)                       # "123", "45", "99"
+}
+
+# Example: Replace and split
+r"\d+".replace("a1b2c3", "X")         # "aXbXcX"
+r"\s+".split("hello  world")          # ["hello", "world"]
+
+# Note: null is falsy, so you can use if match { ... }
+if coords.match("Point: 10,20") {
+    groups = coords.groups("Point: 10,20")
+    # ...
+}
+```
+
 ## Examples
 
 ### 2D Checkerboard

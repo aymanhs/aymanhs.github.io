@@ -315,6 +315,12 @@ class Parser {
             return { type: 'String', value };
         }
         
+        if (this.match(TokenType.REGEX)) {
+            const pattern = this.current().value;
+            this.advance();
+            return { type: 'RegexLiteral', pattern };
+        }
+        
         if (this.match(TokenType.TRUE, TokenType.FALSE)) {
             const value = this.current().value;
             this.advance();

@@ -12,6 +12,7 @@ class Token {
 const TokenType = {
     NUMBER: 'NUMBER',
     STRING: 'STRING',
+    REGEX: 'REGEX',
     IDENT: 'IDENT',
     PLUS: 'PLUS',
     MINUS: 'MINUS',
@@ -166,6 +167,29 @@ class Lexer {
         return str;
     }
 
+    readRawString(quote) {
+        let str = '';
+        this.advance(); // skip opening quote
+        
+        while (this.current() && this.current() !== quote) {
+            // Only handle escaped quotes in raw strings
+            if (this.current() === '\\' && this.peek() === quote) {
+                this.advance();
+                str += quote;
+                this.advance();
+            } else {
+                str += this.current();
+                this.advance();
+            }
+        }
+        
+        if (this.current() === quote) {
+            this.advance(); // skip closing quote
+        }
+        
+        return str;
+    }
+
     readIdentifier() {
         let ident = '';
         let c;
@@ -209,6 +233,14 @@ class Lexer {
             if (c >= '0' && c <= '9') {
                 const num = this.readNumber();
                 return new Token(TokenType.NUMBER, num, line, col);
+            }
+
+            // Raw strings (regex) - r"..." or r'...'
+            if (c === 'r' && (this.peek() === '"' || this.peek() === "'")) {
+                this.advance(); // skip 'r'
+                const quote = this.current();
+                const pattern = this.readRawString(quote);
+                return new Token(TokenType.REGEX, pattern, line, col);
             }
 
             // Strings

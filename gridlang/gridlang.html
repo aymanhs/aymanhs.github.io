@@ -651,6 +651,16 @@ print("Pattern complete!")</textarea>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script>
+        // Add regex literal syntax highlighting for GridLang
+        Prism.languages.insertBefore('python', 'string', {
+            'regex': {
+                pattern: /r(['"])(?:\\.|(?!\1)[^\\\r\n])*\1/,
+                greedy: true,
+                alias: 'string-property'
+            }
+        });
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="stats.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>

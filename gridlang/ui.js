@@ -181,6 +181,16 @@ const builtinFunctions = {
         { name: "repeat(str, count)", desc: "Repeat string count times." },
         { name: "reverse(str)", desc: "Reverse string or array." },
     ],
+    "Regular Expressions": [
+        { name: "r\"pattern\"", desc: "Create regex literal. Use raw strings (r\"...\") to avoid escaping backslashes." },
+        { name: "pattern.test(str)", desc: "Returns true if pattern matches string, false otherwise." },
+        { name: "pattern.match(str)", desc: "Returns matched string on first match, or null. Use if match { ... } to check." },
+        { name: "pattern.groups(str)", desc: "Returns array of capture groups, or object with named groups if pattern uses (?<name>...). Returns null if no match." },
+        { name: "pattern.find_all(str)", desc: "Returns array of all matched strings (no groups)." },
+        { name: "pattern.replace(str, replacement)", desc: "Replace all pattern matches in string with replacement." },
+        { name: "pattern.split(str)", desc: "Split string by pattern into array." },
+        { name: "Named groups example", desc: "r\"(?<year>\\d{4})-(?<month>\\d{2})\".groups(\"2025-12\") returns {year: \"2025\", month: \"12\"}. Access via .year or [\"year\"]." },
+    ],
     "Math": [
         { name: "abs(x)", desc: "Absolute value." },
         { name: "sqrt(x)", desc: "Square root." },
