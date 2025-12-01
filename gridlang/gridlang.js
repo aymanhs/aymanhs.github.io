@@ -115,6 +115,147 @@ class Interpreter {
             return arr;
         });
 
+        // Type conversion functions
+        this.globalEnv.set('str', (val) => {
+            if (val === null) return 'null';
+            if (val === undefined) return 'undefined';
+            if (typeof val === 'string') return val;
+            if (typeof val === 'number') return val.toString();
+            if (typeof val === 'boolean') return val.toString();
+            if (Array.isArray(val)) return '[' + val.map(v => this.toString(v)).join(', ') + ']';
+            return String(val);
+        });
+
+        this.globalEnv.set('int', (val) => {
+            if (typeof val === 'number') return Math.floor(val);
+            if (typeof val === 'string') {
+                const parsed = parseInt(val, 10);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+            if (typeof val === 'boolean') return val ? 1 : 0;
+            return 0;
+        });
+
+        this.globalEnv.set('float', (val) => {
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const parsed = parseFloat(val);
+                return isNaN(parsed) ? 0.0 : parsed;
+            }
+            if (typeof val === 'boolean') return val ? 1.0 : 0.0;
+            return 0.0;
+        });
+
+        this.globalEnv.set('bool', (val) => {
+            return this.isTruthy(val);
+        });
+
+        // String manipulation functions
+        this.globalEnv.set('substr', (str, start, length = null) => {
+            if (typeof str !== 'string') return '';
+            if (length === null) {
+                return str.substring(start);
+            }
+            return str.substring(start, start + length);
+        });
+
+        this.globalEnv.set('slice', (strOrArr, start, end = null) => {
+            if (typeof strOrArr === 'string' || Array.isArray(strOrArr)) {
+                if (end === null) {
+                    return strOrArr.slice(start);
+                }
+                return strOrArr.slice(start, end);
+            }
+            return null;
+        });
+
+        this.globalEnv.set('split', (str, separator = ' ') => {
+            if (typeof str !== 'string') return [];
+            if (separator === '') {
+                return str.split('');
+            }
+            return str.split(separator);
+        });
+
+        this.globalEnv.set('join', (arr, separator = '') => {
+            if (!Array.isArray(arr)) return '';
+            return arr.join(separator);
+        });
+
+        this.globalEnv.set('upper', (str) => {
+            if (typeof str !== 'string') return '';
+            return str.toUpperCase();
+        });
+
+        this.globalEnv.set('lower', (str) => {
+            if (typeof str !== 'string') return '';
+            return str.toLowerCase();
+        });
+
+        this.globalEnv.set('trim', (str) => {
+            if (typeof str !== 'string') return '';
+            return str.trim();
+        });
+
+        this.globalEnv.set('replace', (str, search, replacement) => {
+            if (typeof str !== 'string') return '';
+            return str.replace(new RegExp(search, 'g'), replacement);
+        });
+
+        this.globalEnv.set('starts_with', (str, prefix) => {
+            if (typeof str !== 'string') return false;
+            return str.startsWith(prefix);
+        });
+
+        this.globalEnv.set('ends_with', (str, suffix) => {
+            if (typeof str !== 'string') return false;
+            return str.endsWith(suffix);
+        });
+
+        this.globalEnv.set('contains', (strOrArr, item) => {
+            if (typeof strOrArr === 'string') {
+                return strOrArr.includes(item);
+            } else if (Array.isArray(strOrArr)) {
+                return strOrArr.includes(item);
+            }
+            return false;
+        });
+
+        this.globalEnv.set('index_of', (strOrArr, item) => {
+            if (typeof strOrArr === 'string' || Array.isArray(strOrArr)) {
+                return strOrArr.indexOf(item);
+            }
+            return -1;
+        });
+
+        this.globalEnv.set('char_at', (str, index) => {
+            if (typeof str !== 'string') return '';
+            return str.charAt(index);
+        });
+
+        this.globalEnv.set('char_code', (str, index = 0) => {
+            if (typeof str !== 'string') return 0;
+            return str.charCodeAt(index);
+        });
+
+        this.globalEnv.set('from_char_code', (code) => {
+            return String.fromCharCode(code);
+        });
+
+        this.globalEnv.set('repeat', (str, count) => {
+            if (typeof str !== 'string') return '';
+            return str.repeat(Math.max(0, count));
+        });
+
+        this.globalEnv.set('reverse', (strOrArr) => {
+            if (typeof strOrArr === 'string') {
+                return strOrArr.split('').reverse().join('');
+            } else if (Array.isArray(strOrArr)) {
+                return [...strOrArr].reverse();
+            }
+            return strOrArr;
+        });
+
         // Grid drawing functions
         this.globalEnv.set('init_2d', (gridSize, cellSize = 20) => {
             // Auto-switch to 2D mode

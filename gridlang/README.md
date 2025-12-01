@@ -177,6 +177,37 @@ len(arr)                              # Length of array/map/string
 append(arr, val)                      # Append to array
 ```
 
+### Type Conversion
+```go
+str(val)                              # Convert to string
+int(val)                              # Convert to integer (floors floats, parses strings)
+float(val)                            # Convert to float
+bool(val)                             # Convert to boolean (truthy check)
+```
+
+### String Functions
+```go
+substr(str, start)                    # Extract from start to end
+substr(str, start, length)            # Extract substring of given length
+slice(str, start)                     # Slice from start to end
+slice(str, start, end)                # Slice from start to end (exclusive)
+split(str, separator)                 # Split string into array
+join(arr, separator)                  # Join array into string
+upper(str)                            # Convert to uppercase
+lower(str)                            # Convert to lowercase
+trim(str)                             # Remove leading/trailing whitespace
+replace(str, search, replacement)     # Replace all occurrences
+starts_with(str, prefix)              # Check if string starts with prefix
+ends_with(str, suffix)                # Check if string ends with suffix
+contains(str, item)                   # Check if string/array contains item
+index_of(str, item)                   # Find index of item (-1 if not found)
+char_at(str, index)                   # Get character at index
+char_code(str, index)                 # Get ASCII/Unicode code at index
+from_char_code(code)                  # Create character from code
+repeat(str, count)                    # Repeat string n times
+reverse(str)                          # Reverse string or array
+```
+
 ## Examples
 
 ### 2D Checkerboard
