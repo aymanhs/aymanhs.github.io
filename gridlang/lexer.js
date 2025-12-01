@@ -278,3 +278,8 @@ class Lexer {
         return tokens;
     }
 }
+
+// Export for Node.js testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Token, TokenType, Lexer };
+}

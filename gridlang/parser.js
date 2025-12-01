@@ -1,5 +1,11 @@
 // GridLang Parser - AST Generation
 
+// Import TokenType when running in Node.js
+if (typeof TokenType === 'undefined' && typeof require !== 'undefined') {
+    const { TokenType: TT } = require('./lexer.js');
+    global.TokenType = TT;
+}
+
 class Parser {
     constructor(tokens) {
         this.tokens = tokens;
@@ -383,4 +389,9 @@ class Parser {
         this.expect(TokenType.RBRACE);
         return { type: 'Map', entries };
     }
+}
+
+// Export for Node.js testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Parser };
 }
