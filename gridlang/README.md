@@ -199,6 +199,20 @@ random()                              # Random float [0, 1)
 time()                                # Current Unix timestamp (ms)
 clock()                               # High-precision timer (ms)
 benchmark(func, iterations)           # Measure execution time
+assert(condition, message)            # Throw error if condition is false
+```
+
+**Example - Runtime checks:**
+```go
+# Validate assumptions
+x = 5
+assert(x > 0, "x must be positive")
+assert(len(arr) == 10, "Expected 10 elements")
+
+# Test your code
+func add(a, b) { return a + b }
+assert(add(2, 3) == 5, "add() broken")
+print("All tests passed!")
 ```
 
 ### Input Data (for AoC)
@@ -266,6 +280,60 @@ char_code(str, index)                 # Get ASCII/Unicode code at index
 from_char_code(code)                  # Create character from code
 repeat(str, count)                    # Repeat string n times
 reverse(str)                          # Reverse string or array
+```
+
+### String Methods (OOP style)
+```go
+# Strings support method-call syntax with camelCase names
+text = "  Hello World  "
+text.upper()                          # "  HELLO WORLD  "
+text.lower()                          # "  hello world  "
+text.trim()                           # "Hello World"
+text.trim().upper()                   # "HELLO WORLD" - methods chain!
+
+# String searching and testing
+"hello".startsWith("hel")             # true
+"hello".endsWith("lo")                # true
+"hello world".contains("world")       # true
+"hello".indexOf("l")                  # 2 (first occurrence)
+
+# String manipulation (returns new strings)
+"hi".replace("i", "ey")               # "hey"
+"a,b,c".split(",")                    # ["a", "b", "c"]
+"hello".substring(1, 4)               # "ell"
+"hello".slice(-2)                     # "lo" - negative indices supported!
+
+# String properties
+"hello".length                        # 5 (property, not method call)
+```
+
+### Array Methods (OOP style)
+```go
+# Arrays support method-call syntax
+arr = [1, 2, 3]
+
+# Mutating methods (modify in place)
+arr.push(4)                           # arr is now [1, 2, 3, 4]
+arr.pop()                             # returns 4, arr is now [1, 2, 3]
+arr.insert(1, 99)                     # arr is now [1, 99, 2, 3]
+arr.remove(99)                        # arr is now [1, 2, 3]
+arr.clear()                           # arr is now []
+
+# Non-mutating methods (return new arrays)
+arr = [1, 2, 3]
+arr.slice(1, 3)                       # [2, 3] - arr unchanged
+arr.concat([4, 5])                    # [1, 2, 3, 4, 5] - arr unchanged
+arr.reverse()                         # [3, 2, 1] - arr unchanged
+[3, 1, 2].sort()                      # [1, 2, 3] - sorts numbers correctly!
+
+# Array searching
+arr.indexOf(2)                        # 1
+arr.contains(2)                       # true
+[1, 2, 2, 3].count(2)                 # 2 (occurrences)
+
+# Other array methods
+["a", "b", "c"].join("-")             # "a-b-c"
+[1, 2, 3].length                      # 3 (property, not method call)
 ```
 
 ### Regular Expressions

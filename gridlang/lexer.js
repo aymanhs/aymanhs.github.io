@@ -42,6 +42,7 @@ const TokenType = {
     DOT: 'DOT',
     IF: 'IF',
     ELSIF: 'ELSIF',
+    ELIF: 'ELIF',
     ELSE: 'ELSE',
     FOR: 'FOR',
     WHILE: 'WHILE',
@@ -58,6 +59,7 @@ const TokenType = {
 const KEYWORDS = {
     'if': TokenType.IF,
     'elsif': TokenType.ELSIF,
+    'elif': TokenType.ELIF,
     'else': TokenType.ELSE,
     'for': TokenType.FOR,
     'while': TokenType.WHILE,

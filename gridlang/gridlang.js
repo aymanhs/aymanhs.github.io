@@ -175,6 +175,13 @@ class Interpreter {
             this.debugEnabled = !!enabled;
         });
 
+        // Assert function
+        this.globalEnv.set('assert', (condition, message = 'Assertion failed') => {
+            if (!condition) {
+                throw new Error(message);
+            }
+        });
+
         // Range function
         this.globalEnv.set('range', (start, end, step = 1) => {
             if (end === undefined) {
@@ -914,6 +921,18 @@ class Interpreter {
                     throw new GridLangError(`${node.func.name} is not a function`, node.line, node.col, 'TypeError');
                 }
 
+                // Special handling for assert to include location in error
+                if (node.func.type === 'Identifier' && node.func.name === 'assert') {
+                    try {
+                        return func(...args);
+                    } catch (e) {
+                        if (e instanceof GridLangError) {
+                            throw e;
+                        }
+                        throw new GridLangError(e.message, node.line, node.col, 'AssertionError');
+                    }
+                }
+
                 return func(...args);
             }
 
@@ -946,6 +965,77 @@ class Interpreter {
                         return method.bind(obj);
                     }
                     return null;
+                }
+                
+                // Handle String methods
+                if (typeof obj === 'string') {
+                    switch (property) {
+                        case 'upper':
+                            return () => obj.toUpperCase();
+                        case 'lower':
+                            return () => obj.toLowerCase();
+                        case 'trim':
+                            return () => obj.trim();
+                        case 'replace':
+                            return (oldStr, newStr) => obj.split(String(oldStr)).join(String(newStr));
+                        case 'split':
+                            return (sep) => obj.split(String(sep));
+                        case 'startsWith':
+                            return (prefix) => obj.startsWith(String(prefix));
+                        case 'endsWith':
+                            return (suffix) => obj.endsWith(String(suffix));
+                        case 'contains':
+                            return (substring) => obj.includes(String(substring));
+                        case 'indexOf':
+                            return (substring) => obj.indexOf(String(substring));
+                        case 'substring':
+                            return (start, end) => obj.substring(start, end);
+                        case 'slice':
+                            return (start, end) => obj.slice(start, end);
+                        case 'length':
+                            return obj.length;
+                    }
+                }
+                
+                // Handle Array methods
+                if (Array.isArray(obj)) {
+                    switch (property) {
+                        case 'push':
+                            return (item) => { obj.push(item); return obj.length; };
+                        case 'pop':
+                            return () => obj.pop();
+                        case 'insert':
+                            return (index, item) => { obj.splice(index, 0, item); return null; };
+                        case 'remove':
+                            return (item) => {
+                                const idx = obj.indexOf(item);
+                                if (idx !== -1) obj.splice(idx, 1);
+                                return null;
+                            };
+                        case 'clear':
+                            return () => { obj.length = 0; return null; };
+                        case 'slice':
+                            return (start, end) => obj.slice(start, end);
+                        case 'concat':
+                            return (other) => obj.concat(other);
+                        case 'reverse':
+                            return () => [...obj].reverse();
+                        case 'sort':
+                            return () => [...obj].sort((a, b) => {
+                                if (typeof a === 'number' && typeof b === 'number') return a - b;
+                                return String(a).localeCompare(String(b));
+                            });
+                        case 'join':
+                            return (sep) => obj.join(String(sep));
+                        case 'indexOf':
+                            return (item) => obj.indexOf(item);
+                        case 'contains':
+                            return (item) => obj.includes(item);
+                        case 'count':
+                            return (item) => obj.filter(x => x === item).length;
+                        case 'length':
+                            return obj.length;
+                    }
                 }
                 
                 return null;

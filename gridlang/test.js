@@ -1246,6 +1246,183 @@ runner.test('Error: GridLangError format method works', () => {
     assert(formatted.includes('Test error'), 'Formatted error should include message');
 });
 
+// ============= STRING METHOD TESTS =============
+runner.test('String: upper() method', () => {
+    const result = evaluate('s = "hello"\nprint(s.upper())');
+    assertArrayEqual(result.output, ['HELLO']);
+});
+
+runner.test('String: lower() method', () => {
+    const result = evaluate('s = "WORLD"\nprint(s.lower())');
+    assertArrayEqual(result.output, ['world']);
+});
+
+runner.test('String: trim() method', () => {
+    const result = evaluate('s = "  hello  "\nprint(s.trim())');
+    assertArrayEqual(result.output, ['hello']);
+});
+
+runner.test('String: replace() method', () => {
+    const result = evaluate('s = "hello world"\nprint(s.replace("world", "python"))');
+    assertArrayEqual(result.output, ['hello python']);
+});
+
+runner.test('String: split() method', () => {
+    const result = evaluate('s = "a,b,c"\nparts = s.split(",")\nprint(len(parts))\nprint(parts[1])');
+    assertArrayEqual(result.output, ['3', 'b']);
+});
+
+runner.test('String: startsWith() method', () => {
+    const result = evaluate('s = "hello"\nprint(s.startsWith("hel"))\nprint(s.startsWith("bye"))');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('String: endsWith() method', () => {
+    const result = evaluate('s = "hello"\nprint(s.endsWith("lo"))\nprint(s.endsWith("hi"))');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('String: contains() method', () => {
+    const result = evaluate('s = "hello world"\nprint(s.contains("world"))\nprint(s.contains("bye"))');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('String: indexOf() method', () => {
+    const result = evaluate('s = "hello"\nprint(s.indexOf("l"))\nprint(s.indexOf("z"))');
+    assertArrayEqual(result.output, ['2', '-1']);
+});
+
+runner.test('String: substring() method', () => {
+    const result = evaluate('s = "hello"\nprint(s.substring(1, 4))');
+    assertArrayEqual(result.output, ['ell']);
+});
+
+runner.test('String: slice() method', () => {
+    const result = evaluate('s = "hello"\nprint(s.slice(1, 4))\nprint(s.slice(-2))');
+    assertArrayEqual(result.output, ['ell', 'lo']);
+});
+
+runner.test('String: length property', () => {
+    const result = evaluate('s = "hello"\nprint(s.length)');
+    assertArrayEqual(result.output, ['5']);
+});
+
+// ============= ARRAY METHOD TESTS =============
+runner.test('Array: push() method', () => {
+    const result = evaluate('arr = [1, 2, 3]\narr.push(4)\nprint(arr[3])');
+    assertArrayEqual(result.output, ['4']);
+});
+
+runner.test('Array: pop() method', () => {
+    const result = evaluate('arr = [1, 2, 3]\nx = arr.pop()\nprint(x)\nprint(len(arr))');
+    assertArrayEqual(result.output, ['3', '2']);
+});
+
+runner.test('Array: insert() method', () => {
+    const result = evaluate('arr = [1, 3]\narr.insert(1, 2)\nprint(arr[1])');
+    assertArrayEqual(result.output, ['2']);
+});
+
+runner.test('Array: remove() method', () => {
+    const result = evaluate('arr = [1, 2, 3, 2]\narr.remove(2)\nprint(len(arr))\nprint(arr[1])');
+    assertArrayEqual(result.output, ['3', '3']);
+});
+
+runner.test('Array: clear() method', () => {
+    const result = evaluate('arr = [1, 2, 3]\narr.clear()\nprint(len(arr))');
+    assertArrayEqual(result.output, ['0']);
+});
+
+runner.test('Array: slice() method', () => {
+    const result = evaluate('arr = [1, 2, 3, 4, 5]\nsliced = arr.slice(1, 4)\nprint(len(sliced))\nprint(sliced[0])');
+    assertArrayEqual(result.output, ['3', '2']);
+});
+
+runner.test('Array: concat() method', () => {
+    const result = evaluate('arr1 = [1, 2]\narr2 = [3, 4]\nresult = arr1.concat(arr2)\nprint(len(result))');
+    assertArrayEqual(result.output, ['4']);
+});
+
+runner.test('Array: reverse() method', () => {
+    const result = evaluate('arr = [1, 2, 3]\nrev = arr.reverse()\nprint(rev[0])\nprint(arr[0])');
+    assertArrayEqual(result.output, ['3', '1']);
+});
+
+runner.test('Array: sort() method', () => {
+    const result = evaluate('arr = [3, 1, 2]\nsorted = arr.sort()\nprint(sorted[0])\nprint(arr[0])');
+    assertArrayEqual(result.output, ['1', '3']);
+});
+
+runner.test('Array: join() method', () => {
+    const result = evaluate('arr = ["a", "b", "c"]\nprint(arr.join("-"))');
+    assertArrayEqual(result.output, ['a-b-c']);
+});
+
+runner.test('Array: indexOf() method', () => {
+    const result = evaluate('arr = [10, 20, 30]\nprint(arr.indexOf(20))\nprint(arr.indexOf(99))');
+    assertArrayEqual(result.output, ['1', '-1']);
+});
+
+runner.test('Array: contains() method', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(arr.contains(2))\nprint(arr.contains(5))');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('Array: count() method', () => {
+    const result = evaluate('arr = [1, 2, 2, 3, 2]\nprint(arr.count(2))');
+    assertArrayEqual(result.output, ['3']);
+});
+
+runner.test('Array: length property', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(arr.length)');
+    assertArrayEqual(result.output, ['3']);
+});
+
+// ============= ASSERT FUNCTION TESTS =============
+runner.test('Assert: passes when condition is true', () => {
+    const result = evaluate('assert(true)\nprint("passed")');
+    assertArrayEqual(result.output, ['passed']);
+});
+
+runner.test('Assert: throws when condition is false', () => {
+    let threw = false;
+    try {
+        evaluate('assert(false)');
+    } catch (e) {
+        threw = true;
+        assert(e.message.includes('Assertion failed'), 'Error should mention assertion failed');
+    }
+    assert(threw, 'Should have thrown error');
+});
+
+runner.test('Assert: custom message', () => {
+    let threw = false;
+    try {
+        evaluate('assert(1 == 2, "Math is broken!")');
+    } catch (e) {
+        threw = true;
+        assert(e.message.includes('Math is broken'), 'Error should include custom message');
+    }
+    assert(threw, 'Should have thrown error with custom message');
+});
+
+runner.test('Assert: with expressions', () => {
+    const result = evaluate('x = 5\nassert(x > 0, "x must be positive")\nprint("ok")');
+    assertArrayEqual(result.output, ['ok']);
+});
+
+runner.test('Assert: error includes location', () => {
+    let threw = false;
+    try {
+        evaluate('x = 1\ny = 2\nassert(false, "test")');
+    } catch (e) {
+        threw = true;
+        assert(e.line === 3, `Expected line 3, got ${e.line}`);
+        assert(e.message.includes('test'), 'Error should include message');
+    }
+    assert(threw, 'Should have thrown error');
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);

@@ -144,9 +144,9 @@ class Parser {
         const consequent = this.statement();
         let alternate = null;
         
-        if (this.match(TokenType.ELSIF)) {
+        if (this.match(TokenType.ELSIF, TokenType.ELIF)) {
             this.advance();
-            // Parse remaining elsif chain recursively
+            // Parse remaining elsif/elif chain recursively
             alternate = this.parseIfChain();
         } else if (this.match(TokenType.ELSE)) {
             this.advance();
