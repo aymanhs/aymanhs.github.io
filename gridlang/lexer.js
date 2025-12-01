@@ -13,6 +13,7 @@ const TokenType = {
     NUMBER: 'NUMBER',
     STRING: 'STRING',
     REGEX: 'REGEX',
+    FSTRING: 'FSTRING',
     IDENT: 'IDENT',
     PLUS: 'PLUS',
     MINUS: 'MINUS',
@@ -190,6 +191,85 @@ class Lexer {
         return str;
     }
 
+    readFString(quote) {
+        this.advance(); // skip opening quote
+        const parts = [];
+        let currentString = '';
+        
+        while (this.current() && this.current() !== quote) {
+            if (this.current() === '{') {
+                // Save current string part if any
+                if (currentString) {
+                    parts.push({ type: 'string', value: currentString });
+                    currentString = '';
+                }
+                
+                this.advance(); // skip {
+                
+                // Check for escaped brace {{
+                if (this.current() === '{') {
+                    currentString += '{';
+                    this.advance();
+                    continue;
+                }
+                
+                // Read variable path until }
+                let varPath = '';
+                while (this.current() && this.current() !== '}') {
+                    varPath += this.current();
+                    this.advance();
+                }
+                
+                if (this.current() === '}') {
+                    this.advance(); // skip }
+                }
+                
+                // Parse the variable path (e.g., "person.name" -> ["person", "name"])
+                varPath = varPath.trim();
+                if (varPath) {
+                    parts.push({ type: 'var', path: varPath.split('.') });
+                }
+            } else if (this.current() === '}') {
+                // Check for escaped brace }}
+                this.advance();
+                if (this.current() === '}') {
+                    currentString += '}';
+                    this.advance();
+                } else {
+                    // Single } without matching { - treat as literal
+                    currentString += '}';
+                }
+            } else if (this.current() === '\\') {
+                // Handle escape sequences
+                this.advance();
+                if (this.current()) {
+                    const escaped = this.current();
+                    if (escaped === 'n') currentString += '\n';
+                    else if (escaped === 't') currentString += '\t';
+                    else if (escaped === 'r') currentString += '\r';
+                    else if (escaped === '\\') currentString += '\\';
+                    else if (escaped === quote) currentString += quote;
+                    else currentString += escaped;
+                    this.advance();
+                }
+            } else {
+                currentString += this.current();
+                this.advance();
+            }
+        }
+        
+        // Add final string part if any
+        if (currentString) {
+            parts.push({ type: 'string', value: currentString });
+        }
+        
+        if (this.current() === quote) {
+            this.advance(); // skip closing quote
+        }
+        
+        return parts;
+    }
+
     readIdentifier() {
         let ident = '';
         let c;
@@ -235,12 +315,20 @@ class Lexer {
                 return new Token(TokenType.NUMBER, num, line, col);
             }
 
-            // Raw strings (regex) - r"..." or r'...'
+            // Regex literals (r"..." or r'...')
             if (c === 'r' && (this.peek() === '"' || this.peek() === "'")) {
                 this.advance(); // skip 'r'
                 const quote = this.current();
                 const pattern = this.readRawString(quote);
                 return new Token(TokenType.REGEX, pattern, line, col);
+            }
+
+            // F-strings (f"..." or f'...')
+            if (c === 'f' && (this.peek() === '"' || this.peek() === "'")) {
+                this.advance(); // skip 'f'
+                const quote = this.current();
+                const parts = this.readFString(quote);
+                return new Token(TokenType.FSTRING, parts, line, col);
             }
 
             // Strings

@@ -315,6 +315,12 @@ class Parser {
             return { type: 'String', value };
         }
         
+        if (this.match(TokenType.FSTRING)) {
+            const parts = this.current().value;
+            this.advance();
+            return { type: 'FString', parts };
+        }
+        
         if (this.match(TokenType.REGEX)) {
             const pattern = this.current().value;
             this.advance();

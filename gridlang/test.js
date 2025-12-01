@@ -660,6 +660,58 @@ runner.test('Runtime: Array length', () => {
     assertArrayEqual(result.output, ['3']);
 });
 
+// ========== F-STRING TESTS ==========
+
+runner.test('Runtime: Basic f-string interpolation', () => {
+    const result = evaluate('name = "Alice"\nprint(f"Hello {name}!")');
+    assertArrayEqual(result.output, ['Hello Alice!']);
+});
+
+runner.test('Runtime: F-string with multiple variables', () => {
+    const result = evaluate('x = 5\ny = 10\nprint(f"{x} + {y} = 15")');
+    assertArrayEqual(result.output, ['5 + 10 = 15']);
+});
+
+runner.test('Runtime: F-string with dot notation', () => {
+    const result = evaluate('person = {name: "Bob", age: 30}\nprint(f"{person.name} is {person.age} years old")');
+    assertArrayEqual(result.output, ['Bob is 30 years old']);
+});
+
+runner.test('Runtime: F-string with nested member access', () => {
+    const result = evaluate('data = {user: {name: "Alice", score: 100}}\nprint(f"Player: {data.user.name}, Score: {data.user.score}")');
+    assertArrayEqual(result.output, ['Player: Alice, Score: 100']);
+});
+
+runner.test('Runtime: F-string with escaped braces', () => {
+    const result = evaluate('print(f"Use {{braces}} for literals")');
+    assertArrayEqual(result.output, ['Use {braces} for literals']);
+});
+
+runner.test('Runtime: F-string with numbers', () => {
+    const result = evaluate('count = 42\nprint(f"Count: {count}")');
+    assertArrayEqual(result.output, ['Count: 42']);
+});
+
+runner.test('Runtime: F-string with undefined variable', () => {
+    const result = evaluate('print(f"Value: {missing}")');
+    assertArrayEqual(result.output, ['Value: undefined']);
+});
+
+runner.test('Runtime: F-string with single quotes', () => {
+    const result = evaluate('name = "World"\nprint(f\'Hello {name}!\')');
+    assertArrayEqual(result.output, ['Hello World!']);
+});
+
+runner.test('Runtime: F-string empty', () => {
+    const result = evaluate('print(f"No variables here")');
+    assertArrayEqual(result.output, ['No variables here']);
+});
+
+runner.test('Runtime: F-string with array element access', () => {
+    const result = evaluate('arr = [10, 20, 30]\nfirst = arr[0]\nprint(f"First: {first}")');
+    assertArrayEqual(result.output, ['First: 10']);
+});
+
 // ========== BUILTIN FUNCTIONS TESTS ==========
 
 // Math functions
@@ -951,6 +1003,84 @@ runner.test('Stress: Many assignments', () => {
     const lines = Array.from({ length: 1000 }, (_, i) => `x${i} = ${i}`).join('\n');
     const ast = parse(lines);
     assertEqual(ast.length, 1000);
+});
+
+// ========== COMPREHENSIVE F-STRING TESTS ==========
+runner.test('F-String: basic interpolation', () => {
+    const result = evaluate('name = "Alice"\nprint(f"Hello {name}!")');
+    assertArrayEqual(result.output, ['Hello Alice!']);
+});
+
+runner.test('F-String: multiple variables', () => {
+    const result = evaluate('name = "Alice"\nage = 30\nprint(f"{name} is {age} years old")');
+    assertArrayEqual(result.output, ['Alice is 30 years old']);
+});
+
+runner.test('F-String: with numbers', () => {
+    const result = evaluate('name = "Bob"\nscore = 95.5\nprint(f"{name} scored {score} points")');
+    assertArrayEqual(result.output, ['Bob scored 95.5 points']);
+});
+
+runner.test('F-String: dot notation - object properties', () => {
+    const result = evaluate('person = {name: "Bob", age: 25, city: "NYC"}\nprint(f"Person: {person.name}, Age: {person.age}, City: {person.city}")');
+    assertArrayEqual(result.output, ['Person: Bob, Age: 25, City: NYC']);
+});
+
+runner.test('F-String: nested object access', () => {
+    const result = evaluate('data = {user: {id: 123, name: "Charlie"}}\nprint(f"User ID: {data.user.id}, Name: {data.user.name}")');
+    assertArrayEqual(result.output, ['User ID: 123, Name: Charlie']);
+});
+
+runner.test('F-String: with computed values', () => {
+    const result = evaluate('x = 10\ny = 20\nresult = x + y\nprint(f"{x} + {y} = {result}")');
+    assertArrayEqual(result.output, ['10 + 20 = 30']);
+});
+
+runner.test('F-String: escaped braces', () => {
+    const result = evaluate('print(f"Use {{braces}} for literals")');
+    assertArrayEqual(result.output, ['Use {braces} for literals']);
+});
+
+runner.test('F-String: array elements via variables', () => {
+    const result = evaluate('arr = [1, 2, 3]\nfirst = arr[0]\nlast = arr[2]\nprint(f"First: {first}, Last: {last}")');
+    assertArrayEqual(result.output, ['First: 1, Last: 3']);
+});
+
+runner.test('F-String: undefined variable handling', () => {
+    const result = evaluate('print(f"Missing: {undefined_var}")');
+    assertArrayEqual(result.output, ['Missing: undefined']);
+});
+
+runner.test('F-String: mixed text and variables', () => {
+    const result = evaluate('x = 42\nprint(f"The answer is {x}, not {x + 1}")');
+    // Note: Only variable substitution, not expressions in braces
+    // So this will look for a variable named "x + 1" which doesn't exist
+    assertArrayEqual(result.output, ['The answer is 42, not undefined']);
+});
+
+runner.test('F-String: empty interpolation', () => {
+    const result = evaluate('x = ""\nprint(f"Value: [{x}]")');
+    assertArrayEqual(result.output, ['Value: []']);
+});
+
+runner.test('F-String: boolean values', () => {
+    const result = evaluate('flag = true\nprint(f"Flag is {flag}")');
+    assertArrayEqual(result.output, ['Flag is true']);
+});
+
+runner.test('F-String: multiple interpolations', () => {
+    const result = evaluate('a = 1\nb = 2\nc = 3\nprint(f"{a} and {b} and {c}")');
+    assertArrayEqual(result.output, ['1 and 2 and 3']);
+});
+
+runner.test('F-String: deep nested object', () => {
+    const result = evaluate('obj = {a: {b: {c: {d: "deep"}}}}\nprint(f"Value: {obj.a.b.c.d}")');
+    assertArrayEqual(result.output, ['Value: deep']);
+});
+
+runner.test('F-String: with special characters', () => {
+    const result = evaluate('text = "Hello World!"\nprint(f"Text: {text}")');
+    assertArrayEqual(result.output, ['Text: Hello World!']);
 });
 
 // Run all tests

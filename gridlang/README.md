@@ -8,6 +8,7 @@ A fast scripting language with built-in 2D grid and 3D voxel rendering capabilit
 ✅ **Arithmetic operations** - `+`, `-`, `*`, `/`, `%`, `**`  
 ✅ **Arrays** - Including multi-dimensional: `[[1,2], [3,4]]`  
 ✅ **Maps/Objects** - JS-style: `{x: 10, y: 20}` with dot notation  
+✅ **Template strings** - Python f-strings: `f"Hello {name}!"`  
 ✅ **Functions** - With recursion support  
 ✅ **Control flow** - `if/else`, `for`, `while`  
 ✅ **2D Grid drawing** - Built-in canvas API  
@@ -53,6 +54,26 @@ print(person["age"])
 # Assignment works both ways
 person.age = 31
 person["city"] = "NYC"
+```
+
+### Template Strings (F-Strings)
+```go
+# Python-style f-strings with variable interpolation
+name = "Alice"
+age = 30
+print(f"Hello {name}, you are {age} years old!")
+# Output: "Hello Alice, you are 30 years old!"
+
+# Supports dot notation for nested access
+person = {name: "Bob", score: 100}
+print(f"Player: {person.name}, Score: {person.score}")
+
+# Escaped braces for literals
+print(f"Use {{braces}} for literal braces")
+# Output: "Use {braces} for literal braces"
+
+# Works with single or double quotes
+msg = f'Hello {name}!'
 ```
 
 ### Functions

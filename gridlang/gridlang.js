@@ -932,6 +932,43 @@ class Interpreter {
             case 'String':
                 return node.value;
 
+            case 'FString': {
+                let result = '';
+                for (const part of node.parts) {
+                    if (part.type === 'string') {
+                        result += part.value;
+                    } else if (part.type === 'var') {
+                        // Resolve variable path (e.g., ["person", "name"])
+                        let value;
+                        
+                        try {
+                            // Start with the first variable name from environment
+                            const varName = part.path[0];
+                            value = env.get(varName);
+                            
+                            // Follow the rest of the path (dot notation)
+                            for (let i = 1; i < part.path.length; i++) {
+                                const prop = part.path[i];
+                                if (value instanceof Map) {
+                                    value = value.get(prop);
+                                } else if (value && typeof value === 'object') {
+                                    value = value[prop];
+                                } else {
+                                    value = undefined;
+                                    break;
+                                }
+                            }
+                        } catch (e) {
+                            // Variable not found - use undefined
+                            value = undefined;
+                        }
+                        
+                        result += this.toString(value);
+                    }
+                }
+                return result;
+            }
+
             case 'RegexLiteral':
                 return new Regex(node.pattern);
 

@@ -751,12 +751,25 @@ print("Pattern complete!")</textarea>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script>
-        // Add regex literal syntax highlighting for GridLang
+        // Add regex literal and f-string syntax highlighting for GridLang
         Prism.languages.insertBefore('python', 'string', {
             'regex': {
                 pattern: /r(['"])(?:\\.|(?!\1)[^\\\r\n])*\1/,
                 greedy: true,
                 alias: 'string-property'
+            },
+            'fstring': {
+                pattern: /f(['"])(?:\\.|(?!\1)[^\\\r\n])*\1/,
+                greedy: true,
+                inside: {
+                    'interpolation': {
+                        pattern: /{[^}]+}/,
+                        inside: {
+                            'punctuation': /[{}]/,
+                            rest: Prism.languages.python
+                        }
+                    }
+                }
             }
         });
     </script>

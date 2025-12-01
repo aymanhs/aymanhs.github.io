@@ -188,6 +188,12 @@ const builtinFunctions = {
         { name: "repeat(str, count)", desc: "Repeat string count times." },
         { name: "reverse(str)", desc: "Reverse string or array." },
     ],
+    "Template Strings": [
+        { name: "f\"text {var}\"", desc: "F-string with variable interpolation. Variables are substituted directly into the string." },
+        { name: "f\"Hello {name}!\"", desc: "Basic interpolation. Evaluates to 'Hello Alice!' if name='Alice'." },
+        { name: "f\"{obj.prop}\"", desc: "Supports dot notation. Access nested properties: f\"{person.name}\"." },
+        { name: "f\"{{literal}}\"", desc: "Use {{ and }} for literal braces. f\"{{value}}\" outputs '{value}'." },
+    ],
     "Regular Expressions": [
         { name: "r\"pattern\"", desc: "Create regex literal. Use raw strings (r\"...\") to avoid escaping backslashes." },
         { name: "pattern.test(str)", desc: "Returns true if pattern matches string, false otherwise." },
