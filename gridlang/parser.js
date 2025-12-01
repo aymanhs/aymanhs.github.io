@@ -160,11 +160,19 @@ class Parser {
         const loc = this.loc();
         this.expect(TokenType.FOR);
         const ident = this.expect(TokenType.IDENT).value;
+        
+        // Check for second variable: for i, v in array or for k, v in map
+        let secondIdent = null;
+        if (this.match(TokenType.COMMA)) {
+            this.advance();
+            secondIdent = this.expect(TokenType.IDENT).value;
+        }
+        
         this.expect(TokenType.IN);
         const iterable = this.expression();
         const body = this.statement();
         
-        return { type: 'For', variable: ident, iterable, body, ...loc };
+        return { type: 'For', variable: ident, valueVariable: secondIdent, iterable, body, ...loc };
     }
 
     whileStatement() {
@@ -201,6 +209,25 @@ class Parser {
         this.expect(TokenType.RETURN);
         const value = this.match(TokenType.RBRACE, TokenType.EOF) ? null : this.expression();
         return { type: 'Return', value, ...loc };
+    }
+
+    funcExpression() {
+        const loc = this.loc();
+        this.expect(TokenType.FUNC);
+        this.expect(TokenType.LPAREN);
+        
+        const params = [];
+        while (!this.match(TokenType.RPAREN)) {
+            params.push(this.expect(TokenType.IDENT).value);
+            if (this.match(TokenType.COMMA)) {
+                this.advance();
+            }
+        }
+        
+        this.expect(TokenType.RPAREN);
+        const body = this.statement();
+        
+        return { type: 'FuncExpr', params, body, ...loc };
     }
 
     expressionStatement() {
@@ -437,6 +464,11 @@ class Parser {
             const expr = this.expression();
             this.expect(TokenType.RPAREN);
             return expr;
+        }
+        
+        // Anonymous function expression
+        if (this.match(TokenType.FUNC)) {
+            return this.funcExpression();
         }
         
         const loc = this.loc();

@@ -197,10 +197,19 @@ const builtinFunctions = {
         { name: "debug(...args)", desc: "Print values in grey only when debug is enabled (checkbox or set_debug(true))." },
         { name: "set_debug(enabled)", desc: "Enable or disable debug output. Use with debug() for conditional logging." },
     ],
+    "Functions": [
+        { name: "func name(params) { ... }", desc: "Define named function." },
+        { name: "func(params) { ... }", desc: "Anonymous function (lambda). Assign to variable: f = func(x) { return x * 2 }" },
+        { name: "return value", desc: "Return value from function." },
+    ],
     "Arrays & Iteration": [
         { name: "range(start, end, step=1)", desc: "Generate array of numbers. If only one arg, starts from 0." },
         { name: "len(array)", desc: "Get length of array or string." },
         { name: "append(array, value)", desc: "Add element to end of array." },
+        { name: "for item in array { ... }", desc: "Iterate over array values." },
+        { name: "for i, v in array { ... }", desc: "Iterate with index and value. Like enumerate in Python." },
+        { name: "for key in map { ... }", desc: "Iterate over map keys." },
+        { name: "for k, v in map { ... }", desc: "Iterate over map keys and values." },
     ],
     "Array Methods": [
         { name: "arr.push(value)", desc: "Add element to end of array (mutates)." },

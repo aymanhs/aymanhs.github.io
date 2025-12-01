@@ -1423,6 +1423,115 @@ runner.test('Assert: error includes location', () => {
     assert(threw, 'Should have thrown error');
 });
 
+// ============= FIRST-CLASS FUNCTIONS TESTS =============
+runner.test('First-class: function as variable', () => {
+    const result = evaluate('func add(a, b) { return a + b }\nf = add\nprint(f(2, 3))');
+    assertArrayEqual(result.output, ['5']);
+});
+
+runner.test('First-class: function as argument', () => {
+    const result = evaluate('func apply(fn, x) { return fn(x) }\nfunc double(n) { return n * 2 }\nprint(apply(double, 5))');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('First-class: return function (closure)', () => {
+    const result = evaluate('func makeAdder(x) {\n  func adder(y) { return x + y }\n  return adder\n}\nadd5 = makeAdder(5)\nprint(add5(10))');
+    assertArrayEqual(result.output, ['15']);
+});
+
+// ============= ANONYMOUS FUNCTIONS (LAMBDAS) TESTS =============
+runner.test('Lambda: assign to variable', () => {
+    const result = evaluate('f = func(x) { return x * 2 }\nprint(f(5))');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('Lambda: inline function call', () => {
+    const result = evaluate('result = func(a, b) { return a + b }(3, 4)\nprint(result)');
+    assertArrayEqual(result.output, ['7']);
+});
+
+runner.test('Lambda: pass as argument', () => {
+    const result = evaluate('func apply(fn, x) { return fn(x) }\nresult = apply(func(n) { return n * 3 }, 5)\nprint(result)');
+    assertArrayEqual(result.output, ['15']);
+});
+
+runner.test('Lambda: return from function', () => {
+    const result = evaluate('func multiplier(factor) { return func(x) { return x * factor } }\ntimes3 = multiplier(3)\nprint(times3(10))');
+    assertArrayEqual(result.output, ['30']);
+});
+
+runner.test('Lambda: in array', () => {
+    const result = evaluate('funcs = [func(x) { return x + 1 }, func(x) { return x * 2 }]\nprint(funcs[0](5))\nprint(funcs[1](5))');
+    assertArrayEqual(result.output, ['6', '10']);
+});
+
+// ============= README EXAMPLES VALIDATION =============
+runner.test('README: Lambda examples work', () => {
+    const result = evaluate('f = func(x) { return x * 2 }\nprint(f(5))');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('README: String method examples work', () => {
+    const result = evaluate('text = "  Hello World  "\nprint(text.trim().upper())');
+    assertArrayEqual(result.output, ['HELLO WORLD']);
+});
+
+runner.test('README: Array method examples work', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(arr.slice(1, 3).concat([4, 5]).join("-"))');
+    assertArrayEqual(result.output, ['2-3-4-5']);
+});
+
+runner.test('README: F-string examples work', () => {
+    const result = evaluate('name = "Alice"\nprint(f"Hello {name}!")');
+    assertArrayEqual(result.output, ['Hello Alice!']);
+});
+
+runner.test('README: Assert examples work', () => {
+    const result = evaluate('x = 5\nassert(x > 0, "x must be positive")\nprint("passed")');
+    assertArrayEqual(result.output, ['passed']);
+});
+
+runner.test('README: elif examples work', () => {
+    const result = evaluate('x = 7\nif x > 10 { print("big") } elif x > 5 { print("medium") } else { print("small") }');
+    assertArrayEqual(result.output, ['medium']);
+});
+
+runner.test('README: Regex examples work', () => {
+    const result = evaluate('pattern = r"\\d+"\nprint(pattern.test("123"))');
+    assertArrayEqual(result.output, ['true']);
+});
+
+// ============= FOR LOOP WITH TWO VARIABLES TESTS =============
+runner.test('For loop: array with index and value', () => {
+    const result = evaluate('arr = ["a", "b", "c"]\nfor i, v in arr {\n  print(i, v)\n}');
+    assertArrayEqual(result.output, ['0 a', '1 b', '2 c']);
+});
+
+runner.test('For loop: map with key and value', () => {
+    const result = evaluate('m = {x: 10, y: 20}\nfor k, v in m {\n  print(k, v)\n}');
+    assertArrayEqual(result.output, ['x 10', 'y 20']);
+});
+
+runner.test('For loop: array with single variable (backward compat)', () => {
+    const result = evaluate('arr = [1, 2, 3]\nfor v in arr {\n  print(v)\n}');
+    assertArrayEqual(result.output, ['1', '2', '3']);
+});
+
+runner.test('For loop: map with single variable (backward compat)', () => {
+    const result = evaluate('m = {a: 1, b: 2}\nfor k in m {\n  print(k)\n}');
+    assertArrayEqual(result.output, ['a', 'b']);
+});
+
+runner.test('For loop: enumerate pattern', () => {
+    const result = evaluate('words = ["hello", "world"]\nfor i, word in words {\n  print(f"{i}: {word}")\n}');
+    assertArrayEqual(result.output, ['0: hello', '1: world']);
+});
+
+runner.test('README: Two-variable for loop examples work', () => {
+    const result = evaluate('for i, v in ["a", "b", "c"] {\n  print(i, v)\n}');
+    assertArrayEqual(result.output, ['0 a', '1 b', '2 c']);
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);

@@ -3,5 +3,5 @@
 // Example: 'v1.0.0a' (8 chars) or 'ab12cd34'
 (function(){
   // Keep exactly 8 chars for display and cache-busting
-  window.GRIDLANG_VERSION = 'gh34ij56';
+  window.GRIDLANG_VERSION = 'op78qr90';
 })();

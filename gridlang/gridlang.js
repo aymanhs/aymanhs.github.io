@@ -832,14 +832,34 @@ class Interpreter {
                 const loopEnv = new Environment(env);
 
                 if (Array.isArray(iterable)) {
-                    for (const item of iterable) {
-                        loopEnv.set(node.variable, item);
-                        this.eval(node.body, loopEnv);
+                    if (node.valueVariable) {
+                        // for i, v in array - iterate with index and value
+                        for (let i = 0; i < iterable.length; i++) {
+                            loopEnv.set(node.variable, i);
+                            loopEnv.set(node.valueVariable, iterable[i]);
+                            this.eval(node.body, loopEnv);
+                        }
+                    } else {
+                        // for v in array - iterate with values only
+                        for (const item of iterable) {
+                            loopEnv.set(node.variable, item);
+                            this.eval(node.body, loopEnv);
+                        }
                     }
                 } else if (iterable instanceof Map) {
-                    for (const key of iterable.keys()) {
-                        loopEnv.set(node.variable, key);
-                        this.eval(node.body, loopEnv);
+                    if (node.valueVariable) {
+                        // for k, v in map - iterate with key and value
+                        for (const [key, value] of iterable.entries()) {
+                            loopEnv.set(node.variable, key);
+                            loopEnv.set(node.valueVariable, value);
+                            this.eval(node.body, loopEnv);
+                        }
+                    } else {
+                        // for k in map - iterate with keys only
+                        for (const key of iterable.keys()) {
+                            loopEnv.set(node.variable, key);
+                            this.eval(node.body, loopEnv);
+                        }
                     }
                 } else {
                     throw new GridLangError('For loop requires an iterable', node.line, node.col, 'RuntimeError');
@@ -868,6 +888,29 @@ class Interpreter {
 
                 env.set(node.name, func);
                 return null;
+            }
+
+            case 'FuncExpr': {
+                // Anonymous function - return the function itself
+                const func = (...args) => {
+                    const funcEnv = new Environment(env);
+
+                    for (let i = 0; i < node.params.length; i++) {
+                        funcEnv.set(node.params[i], args[i] !== undefined ? args[i] : null);
+                    }
+
+                    try {
+                        this.eval(node.body, funcEnv);
+                        return null;
+                    } catch (e) {
+                        if (e instanceof ReturnValue) {
+                            return e.value;
+                        }
+                        throw e;
+                    }
+                };
+
+                return func;
             }
 
             case 'Return':

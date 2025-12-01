@@ -95,6 +95,24 @@ func factorial(n) {
     }
     return n * factorial(n - 1)
 }
+
+# Anonymous functions (lambdas)
+f = func(x) { return x * 2 }
+print(f(5))  # 10
+
+# Inline lambda
+result = func(a, b) { return a + b }(3, 4)  # 7
+
+# Pass lambda as argument
+func apply(fn, x) { return fn(x) }
+result = apply(func(n) { return n * 3 }, 5)  # 15
+
+# Return lambda (closure)
+func multiplier(factor) {
+    return func(x) { return x * factor }
+}
+times3 = multiplier(3)
+print(times3(10))  # 30
 ```
 
 ### Control Flow
@@ -127,6 +145,16 @@ for i in range(10) {
 
 for item in [1, 2, 3] {
     print(item)
+}
+
+# For loop with index and value (enumerate)
+for i, v in ["a", "b", "c"] {
+    print(i, v)  # 0 a, 1 b, 2 c
+}
+
+# For loop over map keys and values
+for k, v in {x: 10, y: 20} {
+    print(k, v)  # x 10, y 20
 }
 
 # While loops
