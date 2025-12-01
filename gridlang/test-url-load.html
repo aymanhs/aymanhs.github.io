@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test URL Loading</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+</head>
+<body>
+    <h2>Testing URL Code Loading</h2>
+    <p>Click the link below to test:</p>
+    <div id="links"></div>
+    
+    <script>
+        const testCode = `# Test Code from URL
+print("Hello from shared URL!")
+
+for i in range(5) {
+    print("Number:", i)
+}`;
+
+        function compressCode(code) {
+            const bytes = new TextEncoder().encode(code);
+            const compressed = pako.gzip(bytes);
+            const base64 = btoa(String.fromCharCode(...compressed));
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        const compressed = compressCode(testCode);
+        const url = `http://localhost:8765/gridlang/gridlang.html?code=${compressed}`;
+        
+        document.getElementById('links').innerHTML = `
+            <p><a href="${url}" target="_blank">Open GridLang with Shared Code</a></p>
+            <p style="font-size: 12px; word-break: break-all; background: #f0f0f0; padding: 10px;">${url}</p>
+        `;
+    </script>
+</body>
+</html>

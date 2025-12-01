@@ -391,6 +391,28 @@ animate(draw_wave, 30, {clear3d: true, batch3d: true})
 - **Mode selector** - Switch between 2D, 3D, and Console-only modes
 - **Input panels** - Multiple named inputs for AoC problems
 - **Auto-save** - Code and inputs persist in localStorage
+- **Share button (🔗)** - Generate compressed URL to share your code (60-80% compression)
+
+## Sharing Code
+
+Click the **🔗 Share** button in the toolbar to generate a shareable URL:
+
+```
+https://example.com/gridlang/gridlang.html?code=H4sIAAAAAAAA...
+```
+
+- **Compressed**: Uses gzip + base64 encoding (typically 60-80% smaller)
+- **No backend**: All compression happens client-side
+- **One-click copy**: URL is automatically copied to clipboard
+- **Auto-load**: Opening a shared URL automatically loads the code
+- **Privacy**: No data is stored on any server
+
+Example workflow:
+1. Write your GridLang code
+2. Click 🔗 Share button
+3. Copy the URL
+4. Share with others via email, chat, GitHub issues, etc.
+5. Recipients can run your code instantly by opening the link
 
 ## Architecture
 

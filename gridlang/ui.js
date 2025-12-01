@@ -27,6 +27,13 @@ const helpModal = document.getElementById('helpModal');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
 const helpSearch = document.getElementById('helpSearch');
 const helpBody = document.getElementById('helpBody');
+// Share elements
+const shareBtn = document.getElementById('shareBtn');
+const shareModal = document.getElementById('shareModal');
+const shareUrl = document.getElementById('shareUrl');
+const copyUrlBtn = document.getElementById('copyUrlBtn');
+const closeShareBtn = document.getElementById('closeShareBtn');
+const toast = document.getElementById('toast');
 
 // Autocomplete elements
 const autocomplete = document.getElementById('autocomplete');
@@ -304,6 +311,152 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'F1' || (e.ctrlKey && e.key === '/')) {
         e.preventDefault();
         helpBtn.click();
+    }
+});
+
+// ============= SHARE FUNCTIONALITY =============
+// URL compression/decompression using pako
+function compressCode(code) {
+    try {
+        const bytes = new TextEncoder().encode(code);
+        const compressed = pako.gzip(bytes);
+        const base64 = btoa(String.fromCharCode(...compressed));
+        // URL-safe base64
+        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    } catch (e) {
+        console.error('Compression failed:', e);
+        // Fallback to plain base64 without compression
+        return btoa(encodeURIComponent(code)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+}
+
+function decompressCode(compressed) {
+    try {
+        // Convert back from URL-safe base64
+        const base64 = compressed.replace(/-/g, '+').replace(/_/g, '/');
+        // Add padding if needed
+        const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+        const binary = atob(padded);
+        const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        const decompressed = pako.ungzip(bytes);
+        return new TextDecoder().decode(decompressed);
+    } catch (e) {
+        // Fallback: try to decompress as plain base64
+        try {
+            const base64 = compressed.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+            return decodeURIComponent(atob(padded));
+        } catch (e2) {
+            console.error('Decompression failed:', e, e2);
+            return null;
+        }
+    }
+}
+
+function showToast(message, isError = false) {
+    toast.textContent = message;
+    toast.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => {
+        toast.className = 'toast';
+    }, 3000);
+}
+
+function generateShareURL() {
+    const code = editor.value;
+    if (!code.trim()) {
+        showToast('No code to share!', true);
+        return null;
+    }
+
+    try {
+        const compressed = compressCode(code);
+        const url = new URL(window.location.href);
+        url.search = '';
+        url.searchParams.set('code', compressed);
+        
+        // Check URL length (most browsers support ~2000 chars)
+        const urlString = url.toString();
+        if (urlString.length > 2000) {
+            showToast('Warning: URL is very long (' + urlString.length + ' chars). May not work in all browsers.', true);
+        }
+        
+        return urlString;
+    } catch (e) {
+        console.error('Failed to generate share URL:', e);
+        showToast('Failed to generate URL: ' + e.message, true);
+        return null;
+    }
+}
+
+function loadFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get('code');
+    
+    if (codeParam) {
+        try {
+            const code = decompressCode(codeParam);
+            if (code) {
+                editor.value = code;
+                updateHighlight();
+                updateLineNumbers();
+                showToast('Code loaded from URL!');
+                
+                // Set dropdown to show it's shared code
+                scriptSelect.value = '';
+                
+                // Mark as unsaved so user can save it if they want
+                hasUnsavedChanges = true;
+                lastSavedContent = '';
+                if (dirtyIndicator) {
+                    dirtyIndicator.style.color = '#fbbf24';
+                    dirtyIndicator.title = 'Shared code - not saved yet';
+                }
+                
+                // Clear URL after loading (keeps URL clean)
+                const url = new URL(window.location.href);
+                url.search = '';
+                window.history.replaceState({}, document.title, url.toString());
+                
+                return true; // Successfully loaded from URL
+            } else {
+                showToast('Failed to decode URL', true);
+            }
+        } catch (e) {
+            console.error('Failed to load code from URL:', e);
+            showToast('Failed to load code from URL', true);
+        }
+    }
+    return false; // No URL code to load
+}
+
+// Share button handler
+shareBtn.addEventListener('click', () => {
+    const url = generateShareURL();
+    if (url) {
+        shareUrl.textContent = url;
+        shareModal.classList.add('show');
+    }
+});
+
+// Copy URL button
+copyUrlBtn.addEventListener('click', () => {
+    const url = shareUrl.textContent;
+    navigator.clipboard.writeText(url).then(() => {
+        showToast('URL copied to clipboard!');
+    }).catch(err => {
+        showToast('Failed to copy URL', true);
+        console.error('Copy failed:', err);
+    });
+});
+
+// Close share modal
+closeShareBtn.addEventListener('click', () => {
+    shareModal.classList.remove('show');
+});
+
+shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) {
+        shareModal.classList.remove('show');
     }
 });
 
@@ -826,7 +979,11 @@ function loadFilesFromLocalStorage() {
             updateScriptSelect();
         }
 
-        if (savedCurrent !== null && savedFiles[savedCurrent] !== undefined) {
+        // Only load the current file if no URL code is being loaded
+        const params = new URLSearchParams(window.location.search);
+        const hasUrlCode = params.get('code');
+        
+        if (!hasUrlCode && savedCurrent !== null && savedFiles[savedCurrent] !== undefined) {
             currentFileId = savedCurrent;
             scriptSelect.value = 'file:' + currentFileId;
             editor.value = savedFiles[currentFileId];
@@ -982,9 +1139,12 @@ document.addEventListener('mouseup', () => {
 
 // Load saved data on startup
 loadFromLocalStorage();
-loadFilesFromLocalStorage();
+loadFilesFromLocalStorage(); // This now checks for URL params internally
 updateInputSelect();
 updateScriptSelect();
+
+// Load code from URL if present (after files are loaded)
+loadFromURL();
 
 // Warn on page unload if there are unsaved changes
 window.addEventListener('beforeunload', (e) => {

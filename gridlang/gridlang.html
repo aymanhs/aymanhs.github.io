@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GridLang - Visual Scripting Language</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -398,6 +399,87 @@
             font-size: 14px;
         }
 
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0e639c;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: #d32f2f;
+        }
+
+        /* Share modal */
+        .share-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .share-modal.show {
+            display: flex;
+        }
+
+        .share-content {
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            padding: 20px;
+            max-width: 600px;
+            width: 90%;
+            color: #d4d4d4;
+        }
+
+        .share-content h2 {
+            margin-bottom: 15px;
+            color: #4ec9b0;
+            font-size: 18px;
+        }
+
+        .share-url-container {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-size: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .share-buttons button {
+            flex: 1;
+        }
+
         .help-search {
             padding: 15px 20px;
             border-bottom: 1px solid #3e3e42;
@@ -584,6 +666,7 @@
                 <button id="saveAsBtn" class="small" title="Save as new file">💾+</button>
                 <button id="renameFileBtn" class="small" title="Rename file">✏️</button>
                 <button id="deleteFileBtn" class="small" title="Delete file">🗑️</button>
+                <button id="shareBtn" class="small" title="Share Code (Generate URL)">🔗</button>
                 <span style="margin: 0 10px; border-left: 1px solid #3e3e42;"></span>
                 <button id="runBtn" title="Run (Ctrl+Enter)">▶</button>
                 <button id="clearBtn" class="clear" title="Clear Canvas">🗑</button>
@@ -646,6 +729,22 @@ print("Pattern complete!")</textarea>
             </div>
             <div class="resizer" id="resizer"></div>
             <div class="console" id="console"></div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Share modal -->
+    <div id="shareModal" class="share-modal">
+        <div class="share-content">
+            <h2>🔗 Share Your Code</h2>
+            <p style="margin-bottom: 10px; font-size: 13px;">Copy this URL to share your code:</p>
+            <div class="share-url-container" id="shareUrl"></div>
+            <div class="share-buttons">
+                <button id="copyUrlBtn">📋 Copy URL</button>
+                <button id="closeShareBtn" class="clear">Close</button>
+            </div>
         </div>
     </div>
 

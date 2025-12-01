@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Share Feature Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+</head>
+<body>
+    <h2>GridLang Share Feature Test</h2>
+    <pre id="output"></pre>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        // Test code
+        const testCode = `# Welcome to GridLang!
+init_2d(20, 20)
+
+for i in range(20) {
+    for j in range(20) {
+        if (i + j) % 2 == 0 {
+            set_cell(i, j, "#4ec9b0")
+        }
+    }
+}`;
+
+        function compressCode(code) {
+            try {
+                const bytes = new TextEncoder().encode(code);
+                const compressed = pako.gzip(bytes);
+                const base64 = btoa(String.fromCharCode(...compressed));
+                return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            } catch (e) {
+                return 'ERROR: ' + e.message;
+            }
+        }
+
+        function decompressCode(compressed) {
+            try {
+                const base64 = compressed.replace(/-/g, '+').replace(/_/g, '/');
+                const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+                const binary = atob(padded);
+                const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+                const decompressed = pako.ungzip(bytes);
+                return new TextDecoder().decode(decompressed);
+            } catch (e) {
+                return 'ERROR: ' + e.message;
+            }
+        }
+
+        // Run tests
+        const originalSize = testCode.length;
+        const compressed = compressCode(testCode);
+        const compressedSize = compressed.length;
+        const decompressed = decompressCode(compressed);
+        const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
+
+        output.textContent = `
+✅ Compression Test Results:
+
+Original code size: ${originalSize} bytes
+Compressed size: ${compressedSize} bytes
+Compression ratio: ${ratio}%
+
+✅ Round-trip test: ${testCode === decompressed ? 'PASSED' : 'FAILED'}
+
+Sample URL:
+http://localhost:8765/gridlang/gridlang.html?code=${compressed}
+
+URL length: ${('http://localhost:8765/gridlang/gridlang.html?code=' + compressed).length} chars
+`;
+    </script>
+</body>
+</html>
