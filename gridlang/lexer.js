@@ -71,18 +71,19 @@ const KEYWORDS = {
 class Lexer {
     constructor(input) {
         this.input = input;
+        this.length = input.length;
         this.pos = 0;
         this.line = 1;
         this.col = 1;
     }
 
     current() {
-        return this.pos < this.input.length ? this.input[this.pos] : null;
+        return this.pos < this.length ? this.input[this.pos] : null;
     }
 
     peek(offset = 1) {
         const p = this.pos + offset;
-        return p < this.input.length ? this.input[p] : null;
+        return p < this.length ? this.input[p] : null;
     }
 
     advance() {
@@ -96,8 +97,14 @@ class Lexer {
     }
 
     skipWhitespace() {
-        while (this.current() && /[ \t\r]/.test(this.current())) {
-            this.advance();
+        let c;
+        while ((c = this.current())) {
+            // Space: 32, Tab: 9, CR: 13
+            if (c === ' ' || c === '\t' || c === '\r') {
+                this.advance();
+            } else {
+                break;
+            }
         }
     }
 
@@ -112,14 +119,20 @@ class Lexer {
     readNumber() {
         let num = '';
         let hasDot = false;
+        let c;
         
-        while (this.current() && (/\d/.test(this.current()) || this.current() === '.')) {
-            if (this.current() === '.') {
+        while ((c = this.current())) {
+            if (c >= '0' && c <= '9') {
+                num += c;
+                this.advance();
+            } else if (c === '.') {
                 if (hasDot) break;
                 hasDot = true;
+                num += c;
+                this.advance();
+            } else {
+                break;
             }
-            num += this.current();
-            this.advance();
         }
         
         return parseFloat(num);
@@ -155,10 +168,16 @@ class Lexer {
 
     readIdentifier() {
         let ident = '';
+        let c;
         
-        while (this.current() && /[a-zA-Z0-9_]/.test(this.current())) {
-            ident += this.current();
-            this.advance();
+        while ((c = this.current())) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
+                (c >= '0' && c <= '9') || c === '_') {
+                ident += c;
+                this.advance();
+            } else {
+                break;
+            }
         }
         
         return ident;
@@ -184,21 +203,22 @@ class Lexer {
                 return new Token(TokenType.NEWLINE, '\n', line, col);
             }
 
+            const c = this.current();
+            
             // Numbers
-            if (/\d/.test(this.current())) {
+            if (c >= '0' && c <= '9') {
                 const num = this.readNumber();
                 return new Token(TokenType.NUMBER, num, line, col);
             }
 
             // Strings
-            if (this.current() === '"' || this.current() === "'") {
-                const quote = this.current();
-                const str = this.readString(quote);
+            if (c === '"' || c === "'") {
+                const str = this.readString(c);
                 return new Token(TokenType.STRING, str, line, col);
             }
 
             // Identifiers and keywords
-            if (/[a-zA-Z_]/.test(this.current())) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_') {
                 const ident = this.readIdentifier();
                 const type = KEYWORDS[ident] || TokenType.IDENT;
                 const value = type === TokenType.TRUE ? true : 

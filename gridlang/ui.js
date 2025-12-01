@@ -15,6 +15,7 @@ const statsBtn = document.getElementById('statsBtn');
 const helpBtn = document.getElementById('helpBtn');
 const scriptSelect = document.getElementById('scriptSelect');
 const debugCheckbox = document.getElementById('debugCheckbox');
+const debugBtn = document.getElementById('debugBtn');
 // File management elements
 const saveFileBtn = document.getElementById('saveFileBtn');
 const saveAsBtn = document.getElementById('saveAsBtn');
@@ -1504,7 +1505,9 @@ function runCode() {
         const elapsed = endTime - startTime;
         const formattedTime = formatExecutionTime(elapsed);
         
-        consoleEl.innerHTML += `<span style="color:#10b981;font-weight:bold">\n✓ Completed in ${formattedTime}</span>\n`;
+        const completionMsg = `<span style="color:#10b981;font-weight:bold">\n✓ Completed in ${formattedTime}</span>\n`;
+        currentInterpreter.cachedConsoleHTML += completionMsg;
+        consoleEl.innerHTML = currentInterpreter.cachedConsoleHTML;
         consoleEl.scrollTop = consoleEl.scrollHeight;
 
     } catch (e) {
@@ -1514,8 +1517,14 @@ function runCode() {
         const formattedTime = formatExecutionTime(elapsed);
         
         const escapedMsg = e.message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        consoleEl.innerHTML += `<span style="color:#f48771">${escapedMsg}</span>\n`;
-        consoleEl.innerHTML += `<span style="color:#ef4444;font-weight:bold">\n✗ Failed after ${formattedTime}</span>\n`;
+        const errorMsg = `<span style="color:#f48771">${escapedMsg}</span>\n<span style="color:#ef4444;font-weight:bold">\n✗ Failed after ${formattedTime}</span>\n`;
+        
+        if (currentInterpreter) {
+            currentInterpreter.cachedConsoleHTML += errorMsg;
+            consoleEl.innerHTML = currentInterpreter.cachedConsoleHTML;
+        } else {
+            consoleEl.innerHTML += errorMsg;
+        }
         consoleEl.scrollTop = consoleEl.scrollHeight;
         
         console.error(e);
@@ -1587,6 +1596,21 @@ runBtn.addEventListener('click', () => {
     }
 });
 clearBtn.addEventListener('click', clearCanvas);
+
+// Debug button toggle
+debugBtn.addEventListener('click', () => {
+    debugCheckbox.checked = !debugCheckbox.checked;
+    updateDebugButtonStyle();
+});
+
+function updateDebugButtonStyle() {
+    if (debugCheckbox.checked) {
+        debugBtn.style.background = '#0e639c';
+    } else {
+        debugBtn.style.background = '#6c6c6c';
+    }
+}
+updateDebugButtonStyle(); // Set initial state
 
 // Resizer functionality
 const resizer = document.getElementById('resizer');

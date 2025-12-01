@@ -9,6 +9,7 @@ if (typeof TokenType === 'undefined' && typeof require !== 'undefined') {
 class Parser {
     constructor(tokens) {
         this.tokens = tokens;
+        this.length = tokens.length;
         this.pos = 0;
     }
 
@@ -18,11 +19,11 @@ class Parser {
 
     peek(offset = 1) {
         const p = this.pos + offset;
-        return p < this.tokens.length ? this.tokens[p] : this.tokens[this.tokens.length - 1];
+        return p < this.length ? this.tokens[p] : this.tokens[this.length - 1];
     }
 
     advance() {
-        if (this.pos < this.tokens.length - 1) {
+        if (this.pos < this.length - 1) {
             this.pos++;
         }
     }
@@ -37,7 +38,11 @@ class Parser {
     }
 
     match(...types) {
-        return types.includes(this.current().type);
+        const currentType = this.tokens[this.pos].type;
+        for (let i = 0; i < types.length; i++) {
+            if (currentType === types[i]) return true;
+        }
+        return false;
     }
 
     parse() {

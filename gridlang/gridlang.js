@@ -64,6 +64,7 @@ class Interpreter {
         this.printBufferSize = 100; // Flush every 100 lines
         this.lastFlushTime = 0;
         this.flushInterval = 50; // Flush every 50ms minimum
+        this.cachedConsoleHTML = ''; // Cache innerHTML to avoid DOM reads
 
         this.setupBuiltins();
     }
@@ -638,8 +639,9 @@ class Interpreter {
     flushPrintBuffer() {
         if (this.printBuffer.length === 0) return;
         
-        // Append all buffered HTML spans at once - maintains color and performance
-        this.consoleElement.innerHTML += this.printBuffer.join('\n') + '\n';
+        // Build string in memory then write to DOM once
+        this.cachedConsoleHTML += this.printBuffer.join('\n') + '\n';
+        this.consoleElement.innerHTML = this.cachedConsoleHTML;
         this.consoleElement.scrollTop = this.consoleElement.scrollHeight;
         
         this.printBuffer = [];
@@ -650,7 +652,8 @@ class Interpreter {
         // Direct logging for non-print messages (errors, benchmarks, etc.)
         const color = type === 'error' ? '#f48771' : '#10b981';
         const escapedMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        this.consoleElement.innerHTML += `<span style="color:${color}">${escapedMsg}</span>\n`;
+        this.cachedConsoleHTML += `<span style="color:${color}">${escapedMsg}</span>\n`;
+        this.consoleElement.innerHTML = this.cachedConsoleHTML;
         this.consoleElement.scrollTop = this.consoleElement.scrollHeight;
     }
 
