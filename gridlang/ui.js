@@ -117,6 +117,43 @@ if (statsBtn) {
 
 // Current mode
 let currentMode = '2d';
+let currentErrorLine = null;
+
+// Error highlighting functions
+function clearErrorHighlight() {
+    if (currentErrorLine !== null) {
+        updateHighlight();
+        currentErrorLine = null;
+    }
+}
+
+function highlightErrorLine(lineNumber) {
+    if (!lineNumber || lineNumber < 1) return;
+    
+    currentErrorLine = lineNumber;
+    
+    // Get the current code
+    const code = editor.value;
+    const lines = code.split('\n');
+    
+    // Scroll to the error line
+    const lineHeight = 21; // 14px font * 1.5 line-height
+    const scrollTo = (lineNumber - 1) * lineHeight;
+    editor.scrollTop = scrollTo - editor.clientHeight / 3; // Center it roughly
+    
+    // Update syntax highlighting with error line marked
+    const highlightedLines = lines.map((line, idx) => {
+        const lineNum = idx + 1;
+        const highlighted = Prism.highlight(line, Prism.languages.python, 'python');
+        if (lineNum === lineNumber) {
+            return `<span class="error-line">${highlighted}</span>`;
+        }
+        return highlighted;
+    });
+    
+    highlightCode.innerHTML = highlightedLines.join('\n');
+    highlight.scrollTop = editor.scrollTop;
+}
 
 // Mode switching
 function switchMode(mode) {
@@ -668,6 +705,7 @@ editor.addEventListener('input', () => {
     markAsChanged();
     updateHighlight();
     updateLineNumbers();
+    clearErrorHighlight();
     // Don't auto-save code - only save inputs
 
     const word = getCurrentWord();
@@ -1680,6 +1718,9 @@ function runCode() {
         // Set debug mode from checkbox
         currentInterpreter.debugEnabled = debugCheckbox.checked;
         
+        // Clear any previous error highlighting
+        clearErrorHighlight();
+        
         currentInterpreter.run(ast);
 
         // Transform run button to stop button if animation is running
@@ -1706,7 +1747,18 @@ function runCode() {
         const elapsed = endTime - startTime;
         const formattedTime = formatExecutionTime(elapsed);
         
-        const escapedMsg = e.message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // Format error with location if available
+        let errorText = e.message;
+        if (e instanceof GridLangError || (e.line !== undefined && e.col !== undefined)) {
+            errorText = e.format ? e.format() : `${e.errorType || 'Error'} at line ${e.line}, col ${e.col}: ${e.message}`;
+            
+            // Highlight the error line in the editor
+            if (e.line) {
+                highlightErrorLine(e.line);
+            }
+        }
+        
+        const escapedMsg = errorText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const errorMsg = `<span style="color:#f48771">${escapedMsg}</span>\n<span style="color:#ef4444;font-weight:bold">\n✗ Failed after ${formattedTime}</span>\n`;
         
         if (currentInterpreter) {

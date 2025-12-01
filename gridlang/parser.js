@@ -6,6 +6,49 @@ if (typeof TokenType === 'undefined' && typeof require !== 'undefined') {
     global.TokenType = TT;
 }
 
+// Define GridLangError if not available
+if (typeof window !== 'undefined' && typeof window.GridLangError === 'undefined') {
+    // Browser context
+    class GridLangError extends Error {
+        constructor(message, line = null, col = null, type = 'Error') {
+            super(message);
+            this.name = 'GridLangError';
+            this.line = line;
+            this.col = col;
+            this.errorType = type;
+        }
+        format() {
+            if (this.line !== null && this.col !== null) {
+                return `${this.errorType} at line ${this.line}, col ${this.col}: ${this.message}`;
+            } else if (this.line !== null) {
+                return `${this.errorType} at line ${this.line}: ${this.message}`;
+            }
+            return `${this.errorType}: ${this.message}`;
+        }
+    }
+    window.GridLangError = GridLangError;
+} else if (typeof global !== 'undefined' && typeof global.GridLangError === 'undefined') {
+    // Node.js context  
+    class GridLangError extends Error {
+        constructor(message, line = null, col = null, type = 'Error') {
+            super(message);
+            this.name = 'GridLangError';
+            this.line = line;
+            this.col = col;
+            this.errorType = type;
+        }
+        format() {
+            if (this.line !== null && this.col !== null) {
+                return `${this.errorType} at line ${this.line}, col ${this.col}: ${this.message}`;
+            } else if (this.line !== null) {
+                return `${this.errorType} at line ${this.line}: ${this.message}`;
+            }
+            return `${this.errorType}: ${this.message}`;
+        }
+    }
+    global.GridLangError = GridLangError;
+}
+
 class Parser {
     constructor(tokens) {
         this.tokens = tokens;
@@ -27,11 +70,16 @@ class Parser {
             this.pos++;
         }
     }
+    
+    loc() {
+        const token = this.current();
+        return { line: token.line, col: token.col };
+    }
 
     expect(type) {
         const token = this.current();
         if (token.type !== type) {
-            throw new Error(`Expected ${type} but got ${token.type} at line ${token.line}`);
+            throw new GridLangError(`Expected ${type} but got ${token.type}`, token.line, token.col, 'SyntaxError');
         }
         this.advance();
         return token;
@@ -82,7 +130,7 @@ class Parser {
         }
         
         this.expect(TokenType.RBRACE);
-        return { type: 'Block', body: statements };
+        return { type: 'Block', body: statements, ...this.loc() };
     }
 
     ifStatement() {
@@ -91,6 +139,7 @@ class Parser {
     }
 
     parseIfChain() {
+        const loc = this.loc();
         const condition = this.expression();
         const consequent = this.statement();
         let alternate = null;
@@ -104,28 +153,31 @@ class Parser {
             alternate = this.statement();
         }
         
-        return { type: 'If', condition, consequent, alternate };
+        return { type: 'If', condition, consequent, alternate, ...loc };
     }
 
     forStatement() {
+        const loc = this.loc();
         this.expect(TokenType.FOR);
         const ident = this.expect(TokenType.IDENT).value;
         this.expect(TokenType.IN);
         const iterable = this.expression();
         const body = this.statement();
         
-        return { type: 'For', variable: ident, iterable, body };
+        return { type: 'For', variable: ident, iterable, body, ...loc };
     }
 
     whileStatement() {
+        const loc = this.loc();
         this.expect(TokenType.WHILE);
         const condition = this.expression();
         const body = this.statement();
         
-        return { type: 'While', condition, body };
+        return { type: 'While', condition, body, ...loc };
     }
 
     funcStatement() {
+        const loc = this.loc();
         this.expect(TokenType.FUNC);
         const name = this.expect(TokenType.IDENT).value;
         this.expect(TokenType.LPAREN);
@@ -141,18 +193,20 @@ class Parser {
         this.expect(TokenType.RPAREN);
         const body = this.statement();
         
-        return { type: 'FuncDef', name, params, body };
+        return { type: 'FuncDef', name, params, body, ...loc };
     }
 
     returnStatement() {
+        const loc = this.loc();
         this.expect(TokenType.RETURN);
         const value = this.match(TokenType.RBRACE, TokenType.EOF) ? null : this.expression();
-        return { type: 'Return', value };
+        return { type: 'Return', value, ...loc };
     }
 
     expressionStatement() {
+        const loc = this.loc();
         const expr = this.expression();
-        return { type: 'ExprStmt', expression: expr };
+        return { type: 'ExprStmt', expression: expr, ...loc };
     }
 
     expression() {
@@ -163,18 +217,19 @@ class Parser {
         const expr = this.logicalOr();
         
         if (this.match(TokenType.ASSIGN)) {
+            const loc = this.loc();
             this.advance();
             const value = this.assignment();
             
             if (expr.type === 'Identifier') {
-                return { type: 'Assignment', target: expr.name, value };
+                return { type: 'Assignment', target: expr.name, value, ...loc };
             } else if (expr.type === 'Index') {
-                return { type: 'IndexAssignment', object: expr.object, index: expr.index, value };
+                return { type: 'IndexAssignment', object: expr.object, index: expr.index, value, ...loc };
             } else if (expr.type === 'MemberAccess') {
-                return { type: 'MemberAssignment', object: expr.object, property: expr.property, value };
+                return { type: 'MemberAssignment', object: expr.object, property: expr.property, value, ...loc };
             }
             
-            throw new Error('Invalid assignment target');
+            throw new GridLangError('Invalid assignment target', loc.line, loc.col, 'SyntaxError');
         }
         
         return expr;
@@ -184,10 +239,11 @@ class Parser {
         let left = this.logicalAnd();
         
         while (this.match(TokenType.OR)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const right = this.logicalAnd();
-            left = { type: 'BinaryOp', op, left, right };
+            left = { type: 'BinaryOp', op, left, right, ...loc };
         }
         
         return left;
@@ -197,10 +253,11 @@ class Parser {
         let left = this.comparison();
         
         while (this.match(TokenType.AND)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const right = this.comparison();
-            left = { type: 'BinaryOp', op, left, right };
+            left = { type: 'BinaryOp', op, left, right, ...loc };
         }
         
         return left;
@@ -210,10 +267,11 @@ class Parser {
         let left = this.additive();
         
         while (this.match(TokenType.EQ, TokenType.NE, TokenType.LT, TokenType.LE, TokenType.GT, TokenType.GE)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const right = this.additive();
-            left = { type: 'BinaryOp', op, left, right };
+            left = { type: 'BinaryOp', op, left, right, ...loc };
         }
         
         return left;
@@ -223,10 +281,11 @@ class Parser {
         let left = this.multiplicative();
         
         while (this.match(TokenType.PLUS, TokenType.MINUS)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const right = this.multiplicative();
-            left = { type: 'BinaryOp', op, left, right };
+            left = { type: 'BinaryOp', op, left, right, ...loc };
         }
         
         return left;
@@ -236,10 +295,11 @@ class Parser {
         let left = this.power();
         
         while (this.match(TokenType.STAR, TokenType.SLASH, TokenType.PERCENT)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const right = this.power();
-            left = { type: 'BinaryOp', op, left, right };
+            left = { type: 'BinaryOp', op, left, right, ...loc };
         }
         
         return left;
@@ -249,10 +309,11 @@ class Parser {
         let left = this.unary();
         
         if (this.match(TokenType.POWER)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const right = this.power(); // Right associative
-            left = { type: 'BinaryOp', op, left, right };
+            left = { type: 'BinaryOp', op, left, right, ...loc };
         }
         
         return left;
@@ -260,10 +321,11 @@ class Parser {
 
     unary() {
         if (this.match(TokenType.MINUS, TokenType.NOT)) {
+            const loc = this.loc();
             const op = this.current().value;
             this.advance();
             const operand = this.unary();
-            return { type: 'UnaryOp', op, operand };
+            return { type: 'UnaryOp', op, operand, ...loc };
         }
         
         return this.postfix();
@@ -275,6 +337,7 @@ class Parser {
         while (true) {
             if (this.match(TokenType.LPAREN)) {
                 // Function call
+                const loc = this.loc();
                 this.advance();
                 const args = [];
                 
@@ -286,22 +349,24 @@ class Parser {
                 }
                 
                 this.expect(TokenType.RPAREN);
-                expr = { type: 'Call', func: expr, args };
+                expr = { type: 'Call', func: expr, args, ...loc };
             } else if (this.match(TokenType.LBRACKET)) {
                 // Index - arr[0] or map["key"]
+                const loc = this.loc();
                 this.advance();
                 const index = this.expression();
                 this.expect(TokenType.RBRACKET);
-                expr = { type: 'Index', object: expr, index };
+                expr = { type: 'Index', object: expr, index, ...loc };
             } else if (this.match(TokenType.DOT)) {
                 // Member access - obj.property
+                const loc = this.loc();
                 this.advance();
                 if (!this.match(TokenType.IDENT)) {
-                    throw new Error(`Expected property name after '.' at line ${this.current().line}`);
+                    throw new GridLangError(`Expected property name after '.'`, loc.line, loc.col, 'SyntaxError');
                 }
                 const property = this.current().value;
                 this.advance();
-                expr = { type: 'MemberAccess', object: expr, property };
+                expr = { type: 'MemberAccess', object: expr, property, ...loc };
             } else {
                 break;
             }
@@ -312,44 +377,51 @@ class Parser {
 
     primary() {
         if (this.match(TokenType.NUMBER)) {
+            const loc = this.loc();
             const value = this.current().value;
             this.advance();
-            return { type: 'Number', value };
+            return { type: 'Number', value, ...loc };
         }
         
         if (this.match(TokenType.STRING)) {
+            const loc = this.loc();
             const value = this.current().value;
             this.advance();
-            return { type: 'String', value };
+            return { type: 'String', value, ...loc };
         }
         
         if (this.match(TokenType.FSTRING)) {
+            const loc = this.loc();
             const parts = this.current().value;
             this.advance();
-            return { type: 'FString', parts };
+            return { type: 'FString', parts, ...loc };
         }
         
         if (this.match(TokenType.REGEX)) {
+            const loc = this.loc();
             const pattern = this.current().value;
             this.advance();
-            return { type: 'RegexLiteral', pattern };
+            return { type: 'RegexLiteral', pattern, ...loc };
         }
         
         if (this.match(TokenType.TRUE, TokenType.FALSE)) {
+            const loc = this.loc();
             const value = this.current().value;
             this.advance();
-            return { type: 'Boolean', value };
+            return { type: 'Boolean', value, ...loc };
         }
         
         if (this.match(TokenType.NULL)) {
+            const loc = this.loc();
             this.advance();
-            return { type: 'Null', value: null };
+            return { type: 'Null', value: null, ...loc };
         }
         
         if (this.match(TokenType.IDENT)) {
+            const loc = this.loc();
             const name = this.current().value;
             this.advance();
-            return { type: 'Identifier', name };
+            return { type: 'Identifier', name, ...loc };
         }
         
         if (this.match(TokenType.LBRACKET)) {
@@ -367,10 +439,12 @@ class Parser {
             return expr;
         }
         
-        throw new Error(`Unexpected token ${this.current().type} at line ${this.current().line}`);
+        const loc = this.loc();
+        throw new GridLangError(`Unexpected token ${this.current().type}`, loc.line, loc.col, 'SyntaxError');
     }
 
     arrayLiteral() {
+        const loc = this.loc();
         this.expect(TokenType.LBRACKET);
         const elements = [];
         
@@ -382,10 +456,11 @@ class Parser {
         }
         
         this.expect(TokenType.RBRACKET);
-        return { type: 'Array', elements };
+        return { type: 'Array', elements, ...loc };
     }
 
     mapLiteral() {
+        const loc = this.loc();
         this.expect(TokenType.LBRACE);
         const entries = [];
         
@@ -399,7 +474,8 @@ class Parser {
                 key = this.current().value;
                 this.advance();
             } else {
-                throw new Error(`Expected string or identifier for map key at line ${this.current().line}`);
+                const loc = this.loc();
+                throw new GridLangError(`Expected string or identifier for map key`, loc.line, loc.col, 'SyntaxError');
             }
             
             this.expect(TokenType.COLON);
@@ -412,7 +488,7 @@ class Parser {
         }
         
         this.expect(TokenType.RBRACE);
-        return { type: 'Map', entries };
+        return { type: 'Map', entries, ...loc };
     }
 }
 

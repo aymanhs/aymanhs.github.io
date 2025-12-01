@@ -1183,6 +1183,69 @@ runner.test('Input: process multiple files in loop', () => {
     assertArrayEqual(result.output, ['10', '20', '30']);
 });
 
+// ============= ERROR REPORTING TESTS =============
+runner.test('Error: Syntax error includes line and column', () => {
+    try {
+        parse('x = 5\ny = 10\nz =');
+        assert(false, 'Should have thrown an error');
+    } catch (e) {
+        assert(e.line !== undefined, 'Error should have line number');
+        assert(e.col !== undefined, 'Error should have column number');
+        assertEqual(e.line, 3, 'Error should be on line 3');
+    }
+});
+
+runner.test('Error: Undefined variable includes location', () => {
+    try {
+        evaluate('x = 5\ny = unknown_var\nz = 10');
+        assert(false, 'Should have thrown an error');
+    } catch (e) {
+        assert(e.line !== undefined && e.line !== null, `Error should have line number, got: ${e.line}`);
+        assert(e.message.includes('Undefined variable'), 'Error should mention undefined variable');
+        assertEqual(e.line, 2, 'Error should be on line 2');
+    }
+});
+
+runner.test('Error: Type error (calling non-function) includes location', () => {
+    try {
+        evaluate('x = 5\ny = x()\nz = 10');
+        assert(false, 'Should have thrown an error');
+    } catch (e) {
+        assert(e.line !== undefined || e.message.includes('line'), 'Error should include line information');
+        assert(e.message.includes('not a function'), 'Error should mention type issue');
+    }
+});
+
+runner.test('Error: For loop with non-iterable includes location', () => {
+    try {
+        evaluate('x = 5\nfor i in x { print(i) }');
+        assert(false, 'Should have thrown an error');
+    } catch (e) {
+        assert(e.line !== undefined || e.message.includes('line'), 'Error should include line information');
+        assert(e.message.includes('iterable'), 'Error should mention iterable issue');
+    }
+});
+
+runner.test('Error: Parser error with unexpected token', () => {
+    try {
+        parse('if x > 5 { y = 10 } else else { z = 20 }');
+        assert(false, 'Should have thrown an error');
+    } catch (e) {
+        assert(e.line !== undefined, 'Error should have line number');
+        assert(e.errorType === 'SyntaxError' || e.message.includes('Syntax'), 'Should be a syntax error');
+    }
+});
+
+runner.test('Error: GridLangError format method works', () => {
+    const { GridLangError } = require('./gridlang.js');
+    const err = new GridLangError('Test error', 5, 10, 'RuntimeError');
+    const formatted = err.format();
+    assert(formatted.includes('line 5'), 'Formatted error should include line');
+    assert(formatted.includes('col 10'), 'Formatted error should include column');
+    assert(formatted.includes('RuntimeError'), 'Formatted error should include error type');
+    assert(formatted.includes('Test error'), 'Formatted error should include message');
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);

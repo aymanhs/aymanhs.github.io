@@ -1,6 +1,26 @@
 // GridLang - Interpreter and Runtime
 // Lexer and Parser are loaded from separate files
 
+// ============= ERROR CLASS =============
+class GridLangError extends Error {
+    constructor(message, line = null, col = null, type = 'Error') {
+        super(message);
+        this.name = 'GridLangError';
+        this.line = line;
+        this.col = col;
+        this.errorType = type;
+    }
+    
+    format() {
+        if (this.line !== null && this.col !== null) {
+            return `${this.errorType} at line ${this.line}, col ${this.col}: ${this.message}`;
+        } else if (this.line !== null) {
+            return `${this.errorType} at line ${this.line}: ${this.message}`;
+        }
+        return `${this.errorType}: ${this.message}`;
+    }
+}
+
 // GridLang Interpreter - Runtime execution
 // ============= INTERPRETER =============
 class ReturnValue {
@@ -15,7 +35,7 @@ class Regex {
         try {
             this.compiled = new RegExp(pattern);
         } catch (e) {
-            throw new Error(`Invalid regex pattern: ${pattern}`);
+            throw new GridLangError(`Invalid regex pattern: ${pattern}`, null, null, 'RuntimeError');
         }
     }
     
@@ -84,9 +104,9 @@ class Environment {
         } else {
             // Helpful error for common f-string mistake
             if (name === 'f') {
-                throw new Error(`Undefined variable: ${name}. Did you mean to use an f-string? F-strings require no space between 'f' and the quote: f"..." not f "..."`);
+                throw new GridLangError(`Undefined variable: ${name}. Did you mean to use an f-string? F-strings require no space between 'f' and the quote: f"..." not f "..."`, null, null, 'RuntimeError');
             }
-            throw new Error(`Undefined variable: ${name}`);
+            throw new GridLangError(`Undefined variable: ${name}`, null, null, 'RuntimeError');
         }
     }
 
@@ -100,7 +120,7 @@ class Environment {
         } else if (this.parent) {
             this.parent.update(name, value);
         } else {
-            throw new Error(`Undefined variable: ${name}`);
+            throw new GridLangError(`Undefined variable: ${name}`, null, null, 'RuntimeError');
         }
     }
 }
@@ -815,7 +835,7 @@ class Interpreter {
                         this.eval(node.body, loopEnv);
                     }
                 } else {
-                    throw new Error('For loop requires an iterable');
+                    throw new GridLangError('For loop requires an iterable', node.line, node.col, 'RuntimeError');
                 }
                 return null;
             }
@@ -891,7 +911,7 @@ class Interpreter {
                 const args = node.args.map(arg => this.eval(arg, env));
 
                 if (typeof func !== 'function') {
-                    throw new Error(`${node.func.name} is not a function`);
+                    throw new GridLangError(`${node.func.name} is not a function`, node.line, node.col, 'TypeError');
                 }
 
                 return func(...args);
@@ -932,7 +952,14 @@ class Interpreter {
             }
 
             case 'Identifier':
-                return env.get(node.name);
+                try {
+                    return env.get(node.name);
+                } catch (e) {
+                    if (e instanceof GridLangError && !e.line) {
+                        throw new GridLangError(e.message, node.line, node.col, e.errorType);
+                    }
+                    throw e;
+                }
 
             case 'Number':
                 return node.value;
@@ -999,7 +1026,7 @@ class Interpreter {
             }
 
             default:
-                throw new Error(`Unknown node type: ${node.type}`);
+                throw new GridLangError(`Unknown node type: ${node.type}`, node.line, node.col, 'RuntimeError');
         }
     }
 
@@ -1033,7 +1060,7 @@ class Interpreter {
             case '>': return left > right;
             case '>=': return left >= right;
             default:
-                throw new Error(`Unknown operator: ${node.op}`);
+                throw new GridLangError(`Unknown operator: ${node.op}`, node.line, node.col, 'RuntimeError');
         }
     }
 
@@ -1044,7 +1071,7 @@ class Interpreter {
             case '-': return -operand;
             case 'not': return !this.isTruthy(operand);
             default:
-                throw new Error(`Unknown unary operator: ${node.op}`);
+                throw new GridLangError(`Unknown unary operator: ${node.op}`, node.line, node.col, 'RuntimeError');
         }
     }
 
@@ -1057,6 +1084,6 @@ class Interpreter {
 
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Interpreter };
+    module.exports = { Interpreter, GridLangError };
 }
 
