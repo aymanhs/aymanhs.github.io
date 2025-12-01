@@ -6,5 +6,5 @@ Things to add to the lang:
 5. ~~string and array methods~~ DONE.
 6. ~~anonymous functions (lambdas)~~ DONE.
 6.5. ~~for i, v in array and for k, v in map~~ DONE.
-7. higher order array methods (map, filter, reduce, forEach, find, some, every)
+7. ~~higher order array methods (map, filter, reduce, forEach, find, some, every)~~ DONE.
 8. 

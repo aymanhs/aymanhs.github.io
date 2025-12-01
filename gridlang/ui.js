@@ -227,6 +227,15 @@ const builtinFunctions = {
         { name: "arr.count(value)", desc: "Count occurrences of value." },
         { name: "arr.length", desc: "Get array length (property, not method)." },
     ],
+    "Higher-Order Array Methods": [
+        { name: "arr.map(fn)", desc: "Transform each element. Returns new array." },
+        { name: "arr.filter(fn)", desc: "Keep elements where fn returns true. Returns new array." },
+        { name: "arr.reduce(fn, initial)", desc: "Accumulate to single value. fn(acc, item). Initial is optional." },
+        { name: "arr.forEach(fn)", desc: "Execute fn for each element. Returns null." },
+        { name: "arr.find(fn)", desc: "First element where fn returns true. Returns null if not found." },
+        { name: "arr.some(fn)", desc: "True if any element makes fn return true." },
+        { name: "arr.every(fn)", desc: "True if all elements make fn return true." },
+    ],
     "Type Conversion": [
         { name: "str(value)", desc: "Convert any value to string." },
         { name: "int(value)", desc: "Convert to integer (floors floats, parses strings)." },

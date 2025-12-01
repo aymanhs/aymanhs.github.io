@@ -1078,6 +1078,47 @@ class Interpreter {
                             return (item) => obj.filter(x => x === item).length;
                         case 'length':
                             return obj.length;
+                        // Higher-order methods
+                        case 'map':
+                            return (fn) => {
+                                if (typeof fn !== 'function') throw new Error('map() requires a function');
+                                return obj.map(item => fn(item));
+                            };
+                        case 'filter':
+                            return (fn) => {
+                                if (typeof fn !== 'function') throw new Error('filter() requires a function');
+                                return obj.filter(item => fn(item));
+                            };
+                        case 'reduce':
+                            return (fn, initial) => {
+                                if (typeof fn !== 'function') throw new Error('reduce() requires a function');
+                                if (initial !== undefined) {
+                                    return obj.reduce((acc, item) => fn(acc, item), initial);
+                                }
+                                return obj.reduce((acc, item) => fn(acc, item));
+                            };
+                        case 'forEach':
+                            return (fn) => {
+                                if (typeof fn !== 'function') throw new Error('forEach() requires a function');
+                                obj.forEach(item => fn(item));
+                                return null;
+                            };
+                        case 'find':
+                            return (fn) => {
+                                if (typeof fn !== 'function') throw new Error('find() requires a function');
+                                const found = obj.find(item => fn(item));
+                                return found !== undefined ? found : null;
+                            };
+                        case 'some':
+                            return (fn) => {
+                                if (typeof fn !== 'function') throw new Error('some() requires a function');
+                                return obj.some(item => fn(item));
+                            };
+                        case 'every':
+                            return (fn) => {
+                                if (typeof fn !== 'function') throw new Error('every() requires a function');
+                                return obj.every(item => fn(item));
+                            };
                     }
                 }
                 

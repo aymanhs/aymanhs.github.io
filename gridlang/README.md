@@ -364,6 +364,41 @@ arr.contains(2)                       # true
 [1, 2, 3].length                      # 3 (property, not method call)
 ```
 
+### Higher-Order Array Methods
+```go
+# map - transform each element
+arr = [1, 2, 3, 4]
+doubled = arr.map(func(x) { return x * 2 })  # [2, 4, 6, 8]
+
+# filter - keep elements matching predicate
+evens = arr.filter(func(x) { return x % 2 == 0 })  # [2, 4]
+
+# reduce - accumulate to single value
+sum = arr.reduce(func(acc, x) { return acc + x }, 0)  # 10
+product = [2, 3, 4].reduce(func(acc, x) { return acc * x })  # 24 (no initial)
+
+# forEach - iterate with side effects
+arr.forEach(func(x) { print(x) })
+
+# find - first element matching predicate
+found = arr.find(func(x) { return x > 2 })  # 3 (returns null if not found)
+
+# some - true if any element matches
+hasEven = arr.some(func(x) { return x % 2 == 0 })  # true
+
+# every - true if all elements match
+allPositive = arr.every(func(x) { return x > 0 })  # true
+
+# Method chaining
+result = [1, 2, 3, 4, 5]
+    .filter(func(x) { return x % 2 == 0 })
+    .map(func(x) { return x * 10 })  # [20, 40]
+
+# With named functions
+func double(x) { return x * 2 }
+arr.map(double)  # [2, 4, 6, 8]
+```
+
 ### Regular Expressions
 ```go
 # Create regex with r"..." literal (raw string - no escape processing)

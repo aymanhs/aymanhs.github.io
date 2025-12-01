@@ -1532,6 +1532,77 @@ runner.test('README: Two-variable for loop examples work', () => {
     assertArrayEqual(result.output, ['0 a', '1 b', '2 c']);
 });
 
+// ============= HIGHER-ORDER ARRAY METHODS TESTS =============
+runner.test('Array.map: transform elements', () => {
+    const result = evaluate('arr = [1, 2, 3]\ndoubled = arr.map(func(x) { return x * 2 })\nfor v in doubled { print(v) }');
+    assertArrayEqual(result.output, ['2', '4', '6']);
+});
+
+runner.test('Array.filter: keep matching elements', () => {
+    const result = evaluate('arr = [1, 2, 3, 4, 5]\nevens = arr.filter(func(x) { return x % 2 == 0 })\nfor v in evens { print(v) }');
+    assertArrayEqual(result.output, ['2', '4']);
+});
+
+runner.test('Array.reduce: sum with initial value', () => {
+    const result = evaluate('arr = [1, 2, 3, 4]\nsum = arr.reduce(func(acc, x) { return acc + x }, 0)\nprint(sum)');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('Array.reduce: product without initial', () => {
+    const result = evaluate('arr = [2, 3, 4]\nproduct = arr.reduce(func(acc, x) { return acc * x })\nprint(product)');
+    assertArrayEqual(result.output, ['24']);
+});
+
+runner.test('Array.forEach: side effects', () => {
+    const result = evaluate('arr = [1, 2, 3]\narr.forEach(func(x) { print(x * 10) })');
+    assertArrayEqual(result.output, ['10', '20', '30']);
+});
+
+runner.test('Array.find: first matching element', () => {
+    const result = evaluate('arr = [1, 2, 3, 4, 5]\nfound = arr.find(func(x) { return x > 3 })\nprint(found)');
+    assertArrayEqual(result.output, ['4']);
+});
+
+runner.test('Array.find: returns null when not found', () => {
+    const result = evaluate('arr = [1, 2, 3]\nfound = arr.find(func(x) { return x > 10 })\nprint(found)');
+    assertArrayEqual(result.output, ['null']);
+});
+
+runner.test('Array.some: returns true if any match', () => {
+    const result = evaluate('arr = [1, 2, 3, 4]\nprint(arr.some(func(x) { return x > 3 }))');
+    assertArrayEqual(result.output, ['true']);
+});
+
+runner.test('Array.some: returns false if none match', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(arr.some(func(x) { return x > 10 }))');
+    assertArrayEqual(result.output, ['false']);
+});
+
+runner.test('Array.every: returns true if all match', () => {
+    const result = evaluate('arr = [2, 4, 6]\nprint(arr.every(func(x) { return x % 2 == 0 }))');
+    assertArrayEqual(result.output, ['true']);
+});
+
+runner.test('Array.every: returns false if any dont match', () => {
+    const result = evaluate('arr = [2, 3, 4]\nprint(arr.every(func(x) { return x % 2 == 0 }))');
+    assertArrayEqual(result.output, ['false']);
+});
+
+runner.test('Higher-order: chaining methods', () => {
+    const result = evaluate('arr = [1, 2, 3, 4, 5]\nresult = arr.filter(func(x) { return x % 2 == 0 }).map(func(x) { return x * 10 })\nfor v in result { print(v) }');
+    assertArrayEqual(result.output, ['20', '40']);
+});
+
+runner.test('Higher-order: map with named function', () => {
+    const result = evaluate('func double(x) { return x * 2 }\narr = [1, 2, 3]\nresult = arr.map(double)\nprint(result.join(","))');
+    assertArrayEqual(result.output, ['2,4,6']);
+});
+
+runner.test('README: Higher-order method examples work', () => {
+    const result = evaluate('arr = [1, 2, 3, 4, 5]\nresult = arr.filter(func(x) { return x % 2 == 0 }).map(func(x) { return x * 10 })\nprint(result.join(","))');
+    assertArrayEqual(result.output, ['20,40']);
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);
