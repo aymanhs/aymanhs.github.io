@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>README.md</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; background:#1e1e1e; color:#d4d4d4; margin:0; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .content { background:#1e1e1e; }
+    a { color: #4ec9b0; }
+    pre { background:#252526; padding:12px; border-radius:6px; overflow:auto; }
+    code { font-family: 'Consolas','Monaco',monospace; }
+    h1,h2,h3,h4 { color:#4ec9b0; }
+    blockquote { border-left: 4px solid #3e3e42; margin: 0; padding: 8px 12px; color:#9cdcfe; background:#1a1a1a; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #3e3e42; padding: 8px; }
+    th { background:#2d2d30; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="version.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="md" class="content">Loading README.md…</div>
+  </div>
+  <script>
+    async function loadReadme() {
+      const v = (window.GRIDLANG_VERSION || '').slice(0, 8);
+      const url = v ? `README.md?v=${v}` : 'README.md';
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch README.md');
+        const md = await res.text();
+        // Configure Marked for basic GitHub-flavored markdown
+        marked.setOptions({
+          gfm: true,
+          breaks: false,
+          headerIds: true,
+          mangle: false
+        });
+        const html = marked.parse(md);
+        document.getElementById('md').innerHTML = html;
+      } catch (e) {
+        document.getElementById('md').textContent = 'Error loading README.md: ' + e.message;
+      }
+    }
+    loadReadme();
+  </script>
+</body>
+</html>

@@ -87,11 +87,19 @@ class Parser {
 
     ifStatement() {
         this.expect(TokenType.IF);
+        return this.parseIfChain();
+    }
+
+    parseIfChain() {
         const condition = this.expression();
         const consequent = this.statement();
         let alternate = null;
         
-        if (this.match(TokenType.ELSE)) {
+        if (this.match(TokenType.ELSIF)) {
+            this.advance();
+            // Parse remaining elsif chain recursively
+            alternate = this.parseIfChain();
+        } else if (this.match(TokenType.ELSE)) {
             this.advance();
             alternate = this.statement();
         }

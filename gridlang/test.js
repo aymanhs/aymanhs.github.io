@@ -74,7 +74,7 @@ function parse(code) {
     return program.body;
 }
 
-function evaluate(code) {
+function evaluate(code, inputData = '', inputsMap = {}) {
     const lexer = new Lexer(code);
     const tokens = lexer.tokenize();
     const parser = new Parser(tokens);
@@ -87,7 +87,7 @@ function evaluate(code) {
         scrollHeight: 0 
     };
     
-    const interp = new Interpreter(null, null, mockConsole, null, '', null);
+    const interp = new Interpreter(null, null, mockConsole, null, inputData, null, inputsMap);
     interp.run(ast);
     
     // Return both the interpreter (for variable access) and console output
@@ -220,7 +220,21 @@ runner.test('Parser: Parse if-else statement', () => {
     assert(ast[0].alternate !== null && ast[0].alternate !== undefined, 'Should have alternate branch');
 });
 
-runner.test('Parser: Parse for loop', () => {
+runner.test('Parser: Parse if-elsif statement', () => {
+    const ast = parse('if x > 10 { y = 1 } elsif x > 5 { y = 2 }');
+    assertEqual(ast[0].type, 'If');
+    assertEqual(ast[0].alternate.type, 'If', 'elsif should parse as nested If');
+    assertEqual(ast[0].alternate.condition.type, 'BinaryOp');
+});
+
+runner.test('Parser: Parse if-elsif-else statement', () => {
+    const ast = parse('if x > 10 { y = 1 } elsif x > 5 { y = 2 } else { y = 3 }');
+    assertEqual(ast[0].type, 'If');
+    assertEqual(ast[0].alternate.type, 'If', 'elsif should parse as nested If');
+    assert(ast[0].alternate.alternate !== null, 'Should have final else branch');
+});
+
+runner.test('Parser: For loop', () => {
     const ast = parse('for i in range(5) { print(i) }');
     assertEqual(ast[0].type, 'For');
     assertEqual(ast[0].variable, 'i');
@@ -563,6 +577,16 @@ runner.test('Runtime: Nested object access', () => {
 runner.test('Runtime: If-else control flow', () => {
     const result = evaluate('x = 10\nif x > 5 { print("big") } else { print("small") }');
     assertArrayEqual(result.output, ['big']);
+});
+
+runner.test('Runtime: If-elsif control flow', () => {
+    const result = evaluate('x = 7\nif x > 10 { print("huge") } elsif x > 5 { print("big") } else { print("small") }');
+    assertArrayEqual(result.output, ['big']);
+});
+
+runner.test('Runtime: If-elsif-else with multiple elsif branches', () => {
+    const result = evaluate('score = 75\nif score >= 90 { print("A") } elsif score >= 80 { print("B") } elsif score >= 70 { print("C") } else { print("F") }');
+    assertArrayEqual(result.output, ['C']);
 });
 
 runner.test('Runtime: For loop', () => {
@@ -1081,6 +1105,82 @@ runner.test('F-String: deep nested object', () => {
 runner.test('F-String: with special characters', () => {
     const result = evaluate('text = "Hello World!"\nprint(f"Text: {text}")');
     assertArrayEqual(result.output, ['Text: Hello World!']);
+});
+
+// ========== INPUT FILE TESTS ==========
+runner.test('Input: input_string with default input', () => {
+    const result = evaluate('s = input_string()\nprint(s)', 'Hello World');
+    assertArrayEqual(result.output, ['Hello World']);
+});
+
+runner.test('Input: input_string with named file', () => {
+    const inputs = { data1: 'File 1 content', data2: 'File 2 content' };
+    const result = evaluate('s = input_string("data1")\nprint(s)', '', inputs);
+    assertArrayEqual(result.output, ['File 1 content']);
+});
+
+runner.test('Input: input_string with multiple named files', () => {
+    const inputs = { data1: 'First', data2: 'Second', data3: 'Third' };
+    const result = evaluate('print(input_string("data1"))\nprint(input_string("data2"))\nprint(input_string("data3"))', '', inputs);
+    assertArrayEqual(result.output, ['First', 'Second', 'Third']);
+});
+
+runner.test('Input: input_string with non-existent file', () => {
+    const inputs = { data1: 'Exists' };
+    const result = evaluate('s = input_string("missing")\nprint(len(s))', '', inputs);
+    assertArrayEqual(result.output, ['0']);
+});
+
+runner.test('Input: input_lines with default input', () => {
+    const result = evaluate('lines = input_lines()\nprint(len(lines))', 'line1\nline2\nline3');
+    assertArrayEqual(result.output, ['3']);
+});
+
+runner.test('Input: input_lines with named file', () => {
+    const inputs = { data: 'apple\nbanana\ncherry' };
+    const result = evaluate('lines = input_lines("data")\nprint(lines[0])\nprint(lines[2])', '', inputs);
+    assertArrayEqual(result.output, ['apple', 'cherry']);
+});
+
+runner.test('Input: input_lines filters empty lines', () => {
+    const inputs = { data: 'line1\n\nline2\n\n\nline3' };
+    const result = evaluate('lines = input_lines("data")\nprint(len(lines))', '', inputs);
+    assertArrayEqual(result.output, ['3']);
+});
+
+runner.test('Input: input_grid with default input - char type', () => {
+    const result = evaluate('grid = input_grid("char")\nprint(grid[0][0])\nprint(grid[1][1])', 'ABC\nDEF');
+    assertArrayEqual(result.output, ['A', 'E']);
+});
+
+runner.test('Input: input_grid with named file - int type', () => {
+    const inputs = { nums: '1 2 3\n4 5 6' };
+    const result = evaluate('grid = input_grid("int", " ", "nums")\nprint(grid[0][1])\nprint(grid[1][2])', '', inputs);
+    assertArrayEqual(result.output, ['2', '6']);
+});
+
+runner.test('Input: input_grid with named file - float type', () => {
+    const inputs = { floats: '1.5,2.5\n3.5,4.5' };
+    const result = evaluate('grid = input_grid("float", ",", "floats")\nprint(grid[0][0])\nprint(grid[1][1])', '', inputs);
+    assertArrayEqual(result.output, ['1.5', '4.5']);
+});
+
+runner.test('Input: input_grid with named file - word type', () => {
+    const inputs = { words: 'hello world\nfoo bar' };
+    const result = evaluate('grid = input_grid("word", " ", "words")\nprint(grid[0][1])\nprint(grid[1][0])', '', inputs);
+    assertArrayEqual(result.output, ['world', 'foo']);
+});
+
+runner.test('Input: mixed default and named inputs', () => {
+    const inputs = { alt: 'Named' };
+    const result = evaluate('print(input_string())\nprint(input_string("alt"))', 'Default', inputs);
+    assertArrayEqual(result.output, ['Default', 'Named']);
+});
+
+runner.test('Input: process multiple files in loop', () => {
+    const inputs = { f1: '10', f2: '20', f3: '30' };
+    const result = evaluate('files = ["f1", "f2", "f3"]\nfor f in files { print(input_string(f)) }', '', inputs);
+    assertArrayEqual(result.output, ['10', '20', '30']);
 });
 
 // Run all tests

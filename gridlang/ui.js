@@ -38,6 +38,8 @@ const toast = document.getElementById('toast');
 // Autocomplete elements
 const autocomplete = document.getElementById('autocomplete');
 const functionHint = document.getElementById('functionHint');
+// Version display
+const versionTextEl = document.getElementById('versionText');
 
 // Input panel elements
 const inputSection = document.getElementById('inputSection');
@@ -189,7 +191,7 @@ const builtinFunctions = {
         { name: "reverse(str)", desc: "Reverse string or array." },
     ],
     "Template Strings": [
-        { name: "f\"text {var}\"", desc: "F-string with variable interpolation. Variables are substituted directly into the string." },
+        { name: "f\"text {var}\"", desc: "F-string with variable interpolation. IMPORTANT: No space between f and quote. Use {var} not ${var}." },
         { name: "f\"Hello {name}!\"", desc: "Basic interpolation. Evaluates to 'Hello Alice!' if name='Alice'." },
         { name: "f\"{obj.prop}\"", desc: "Supports dot notation. Access nested properties: f\"{person.name}\"." },
         { name: "f\"{{literal}}\"", desc: "Use {{ and }} for literal braces. f\"{{value}}\" outputs '{value}'." },
@@ -243,9 +245,9 @@ const builtinFunctions = {
         { name: "clear_3d()", desc: "Remove all voxels from scene." },
     ],
     "Input Data": [
-        { name: "input_string()", desc: "Get raw input data as string." },
-        { name: "input_lines()", desc: "Get input as array of lines." },
-        { name: "input_grid(type='int', separator=auto)", desc: "Parse input as 2D grid. type: 'int', 'float', 'char', or 'string'. Auto-detects separator (space/comma/tabs)." },
+        { name: "input_string(filename=null)", desc: "Get raw input data as string. If filename is provided, reads from that named input, otherwise reads from active input." },
+        { name: "input_lines(filename=null)", desc: "Get input as array of lines. If filename is provided, reads from that named input." },
+        { name: "input_grid(type='int', separator=auto, filename=null)", desc: "Parse input as 2D grid. type: 'int', 'float', 'char', or 'string'. Auto-detects separator (space/comma/tabs). If filename is provided, reads from that named input." },
     ]
 };
 
@@ -355,6 +357,15 @@ function decompressCode(compressed) {
         } catch (e2) {
             console.error('Decompression failed:', e, e2);
             return null;
+
+        // Set version text if available
+        try {
+            if (versionTextEl && window.GRIDLANG_VERSION) {
+                versionTextEl.textContent = String(window.GRIDLANG_VERSION).slice(0, 8);
+            }
+        } catch (e) {
+            console.warn('Version display failed:', e);
+        }
         }
     }
 }
@@ -1242,12 +1253,17 @@ print("Sum:", arr[0] + arr[1] + arr[2] + arr[3] + arr[4])`,
 # 15
 # 20
 
-# Read all input as string
+# Read from active input
 raw = input_string()
 print("Raw input:", raw)
 print("")
 
-# Read as lines
+# Read from named input file
+data1 = input_string("data1")
+print("Data1:", data1)
+print("")
+
+# Read as lines (from active or named input)
 lines = input_lines()
 print("Lines:", len(lines))
 for line in lines {
@@ -1262,11 +1278,9 @@ grid = input_grid("int")
 print("Int grid:", grid)
 print("")
 
-# Read as character grid
-# Input: ABC
-#        DEF
-chars = input_grid("char")
-print("Char grid:", chars)`,
+# Read from specific named input file
+grid2 = input_grid("int", " ", "data2")
+print("Grid from data2:", grid2)`,
 
     grid: `# Simple Grid Drawing
 init_2d(10, 40)
@@ -1661,7 +1675,7 @@ function runCode() {
         const ast = parser.parse();
 
         const currentInput = inputs[currentInputId] || '';
-        currentInterpreter = new Interpreter(canvas, canvas3d, consoleEl, renderer3d, currentInput, canvasContainer);
+        currentInterpreter = new Interpreter(canvas, canvas3d, consoleEl, renderer3d, currentInput, canvasContainer, inputs);
         
         // Set debug mode from checkbox
         currentInterpreter.debugEnabled = debugCheckbox.checked;

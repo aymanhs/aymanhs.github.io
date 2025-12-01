@@ -82,6 +82,10 @@ class Environment {
         } else if (this.parent) {
             return this.parent.get(name);
         } else {
+            // Helpful error for common f-string mistake
+            if (name === 'f') {
+                throw new Error(`Undefined variable: ${name}. Did you mean to use an f-string? F-strings require no space between 'f' and the quote: f"..." not f "..."`);
+            }
             throw new Error(`Undefined variable: ${name}`);
         }
     }
@@ -102,7 +106,7 @@ class Environment {
 }
 
 class Interpreter {
-    constructor(canvas, canvas3d, consoleElement, renderer3d, inputData, canvasContainer) {
+    constructor(canvas, canvas3d, consoleElement, renderer3d, inputData, canvasContainer, inputsMap = null) {
         this.canvas = canvas;
         this.canvas3d = canvas3d;
         this.ctx = canvas ? canvas.getContext('2d') : null;
@@ -110,6 +114,7 @@ class Interpreter {
         this.renderer3d = renderer3d;
         this.inputData = inputData || '';
         this.canvasContainer = canvasContainer;
+        this.inputsMap = inputsMap || {};
         this.globalEnv = new Environment();
         this.gridSize = 0;
         this.cellSize = 0;
@@ -512,16 +517,19 @@ class Interpreter {
         });
 
         // Input data functions
-        this.globalEnv.set('input_string', () => {
-            return this.inputData;
+        this.globalEnv.set('input_string', (filename = null) => {
+            const data = filename ? (this.inputsMap[filename] || '') : this.inputData;
+            return data;
         });
 
-        this.globalEnv.set('input_lines', () => {
-            return this.inputData.split('\n').filter(line => line.length > 0);
+        this.globalEnv.set('input_lines', (filename = null) => {
+            const data = filename ? (this.inputsMap[filename] || '') : this.inputData;
+            return data.split('\n').filter(line => line.length > 0);
         });
 
-        this.globalEnv.set('input_grid', (type = 'char', separator = null) => {
-            const lines = this.inputData.split('\n').filter(line => line.trim().length > 0);
+        this.globalEnv.set('input_grid', (type = 'char', separator = null, filename = null) => {
+            const data = filename ? (this.inputsMap[filename] || '') : this.inputData;
+            const lines = data.split('\n').filter(line => line.trim().length > 0);
 
             // Smart separator detection if not provided
             if (separator === null) {

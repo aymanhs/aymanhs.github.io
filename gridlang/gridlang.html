@@ -7,7 +7,9 @@
     <title>GridLang - Visual Scripting Language</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-    <style>
+    <!-- Version file: bump token here when releasing -->
+    <script src="version.js"></script>
+    <style id="style-inline">
         * {
             margin: 0;
             padding: 0;
@@ -616,6 +618,7 @@
             line-height: 1.4;
         }
     </style>
+    <link rel="stylesheet" id="style-prism" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
 </head>
 
 <body>
@@ -634,7 +637,11 @@
     </div>
 
     <header>
-        <h1>GridLang 🎨 Visual Scripting Language</h1>
+        <h1>
+            GridLang 🎨 Visual Scripting Language
+            <span id="versionTag" style="font-size:12px;color:#9cdcfe;margin-left:8px;vertical-align:middle;">v<span id="versionText"></span></span>
+            <a href="readme.html" target="_blank" style="font-size:12px;color:#4ec9b0;margin-left:12px;text-decoration:none;">README</a>
+        </h1>
     </header>
 
     <div class="container">
@@ -776,11 +783,32 @@ print("Pattern complete!")</textarea>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="stats.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="lexer.js"></script>
-    <script src="parser.js"></script>
-    <script src="renderer3d.js"></script>
-    <script src="gridlang.js"></script>
-    <script src="ui.js"></script>
+    <script>
+        // Helper to append version to asset URLs
+        function withVersion(url) {
+            const v = (window.GRIDLANG_VERSION || '').slice(0, 8);
+            const sep = url.includes('?') ? '&' : '?';
+            return v ? url + sep + 'v=' + v : url;
+        }
+    </script>
+    <script src="lexer.js" id="script-lexer"></script>
+    <script src="parser.js" id="script-parser"></script>
+    <script src="renderer3d.js" id="script-renderer"></script>
+    <script src="gridlang.js" id="script-gridlang"></script>
+    <script src="ui.js" id="script-ui"></script>
+    <script>
+        // Apply cache-busting to local asset scripts
+        ['script-lexer','script-parser','script-renderer','script-gridlang','script-ui'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.src = withVersion(el.getAttribute('src'));
+        });
+        // Apply cache-busting to CSS (Prism theme)
+        const prismCss = document.getElementById('style-prism');
+        if (prismCss) prismCss.href = withVersion(prismCss.getAttribute('href'));
+        // Show version in UI
+        const vt = document.getElementById('versionText');
+        if (vt) vt.textContent = (window.GRIDLANG_VERSION || '').slice(0, 8);
+    </script>
 </body>
 
 </html>

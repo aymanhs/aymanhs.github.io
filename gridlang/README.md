@@ -10,7 +10,7 @@ A fast scripting language with built-in 2D grid and 3D voxel rendering capabilit
 ✅ **Maps/Objects** - JS-style: `{x: 10, y: 20}` with dot notation  
 ✅ **Template strings** - Python f-strings: `f"Hello {name}!"`  
 ✅ **Functions** - With recursion support  
-✅ **Control flow** - `if/else`, `for`, `while`  
+✅ **Control flow** - `if/elsif/else`, `for`, `while`  
 ✅ **2D Grid drawing** - Built-in canvas API  
 ✅ **3D Voxel rendering** - Three.js powered with batching  
 ✅ **Animation system** - 60 FPS animations with automatic optimization  
@@ -59,6 +59,7 @@ person["city"] = "NYC"
 ### Template Strings (F-Strings)
 ```go
 # Python-style f-strings with variable interpolation
+# IMPORTANT: No space between f and quote, use {var} not ${var}
 name = "Alice"
 age = 30
 print(f"Hello {name}, you are {age} years old!")
@@ -74,6 +75,12 @@ print(f"Use {{braces}} for literal braces")
 
 # Works with single or double quotes
 msg = f'Hello {name}!'
+
+# COMMON MISTAKES:
+# ❌ f "text"     - Space between f and quote
+# ❌ f"${var}"    - Dollar sign (that's JavaScript, not Python)
+# ✅ f"text"      - Correct
+# ✅ f"{var}"     - Correct
 ```
 
 ### Functions
@@ -95,10 +102,22 @@ func factorial(n) {
 # If statements
 if x > 10 {
     print("Big")
-} else if x > 5 {
+} elsif x > 5 {
     print("Medium")
 } else {
     print("Small")
+}
+
+# Multiple elsif branches
+score = 75
+if score >= 90 {
+    print("A")
+} elsif score >= 80 {
+    print("B")
+} elsif score >= 70 {
+    print("C")
+} else {
+    print("F")
 }
 
 # For loops
@@ -184,9 +203,27 @@ benchmark(func, iterations)           # Measure execution time
 
 ### Input Data (for AoC)
 ```go
-input_string()                        # Get raw input as string
-input_lines()                         # Split input into line array
-input_grid()                          # Parse as 2D character grid
+input_string()                        # Get raw input as string (from active input)
+input_string("filename")              # Get raw input from named input file
+input_lines()                         # Split input into line array (from active input)
+input_lines("filename")               # Split named input into line array
+input_grid()                          # Parse as 2D character grid (from active input)
+input_grid("int")                     # Parse as 2D integer grid (auto-detect separator)
+input_grid("float", ",")              # Parse as 2D float grid with comma separator
+input_grid("char", "", "filename")    # Parse named input as character grid
+```
+
+**Example - Read multiple input files:**
+```go
+# Read from active input
+data = input_string()
+
+# Read from named inputs
+test1 = input_string("test1")
+test2 = input_string("test2")
+
+# Process grid from specific file
+grid = input_grid("int", " ", "puzzle_input")
 ```
 
 ### Utilities
