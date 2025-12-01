@@ -10,11 +10,17 @@ const canvas3d = document.getElementById('canvas3d');
 const canvasContainer = document.getElementById('canvasContainer');
 const consoleEl = document.getElementById('console');
 const runBtn = document.getElementById('runBtn');
-const stopBtn = document.getElementById('stopBtn');
 const clearBtn = document.getElementById('clearBtn');
 const statsBtn = document.getElementById('statsBtn');
 const helpBtn = document.getElementById('helpBtn');
-const exampleSelect = document.getElementById('exampleSelect');
+const scriptSelect = document.getElementById('scriptSelect');
+const debugCheckbox = document.getElementById('debugCheckbox');
+// File management elements
+const saveFileBtn = document.getElementById('saveFileBtn');
+const saveAsBtn = document.getElementById('saveAsBtn');
+const renameFileBtn = document.getElementById('renameFileBtn');
+const deleteFileBtn = document.getElementById('deleteFileBtn');
+const dirtyIndicator = document.getElementById('dirtyIndicator');
 // Help modal elements
 const helpModal = document.getElementById('helpModal');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
@@ -140,7 +146,9 @@ switchMode(currentMode);
 // ============= HELP SYSTEM =============
 const builtinFunctions = {
     "I/O": [
-        { name: "print(...args)", desc: "Print values to console. Accepts multiple arguments." },
+        { name: "print(...args)", desc: "Print values to console in blue." },
+        { name: "debug(...args)", desc: "Print values in grey only when debug is enabled (checkbox or set_debug(true))." },
+        { name: "set_debug(enabled)", desc: "Enable or disable debug output. Use with debug() for conditional logging." },
     ],
     "Arrays & Iteration": [
         { name: "range(start, end, step=1)", desc: "Generate array of numbers. If only one arg, starts from 0." },
@@ -369,7 +377,6 @@ function positionAutocomplete() {
 }
 
 function getCaretCoordinates() {
-    const rect = editor.getBoundingClientRect();
     const style = window.getComputedStyle(editor);
     const lineHeight = parseFloat(style.lineHeight);
     const paddingLeft = parseFloat(style.paddingLeft);
@@ -378,14 +385,18 @@ function getCaretCoordinates() {
     const textBeforeCaret = editor.value.substring(0, editor.selectionStart);
     const lines = textBeforeCaret.split('\n');
     const currentLine = lines.length - 1;
-    const currentCol = lines[lines.length - 1].length;
+    const currentLineText = lines[lines.length - 1];
 
-    // Approximate character width (monospace)
-    const charWidth = 8.4;
+    // Measure actual text width using canvas for accuracy
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = style.font;
+    const textWidth = ctx.measureText(currentLineText).width;
 
+    // Position relative to editor's own position, not viewport
     return {
-        left: rect.left + paddingLeft + (currentCol * charWidth) - editor.scrollLeft,
-        top: rect.top + paddingTop + (currentLine * lineHeight) - editor.scrollTop
+        left: paddingLeft + textWidth - editor.scrollLeft + 60, // +60 for line numbers width
+        top: paddingTop + (currentLine * lineHeight) - editor.scrollTop
     };
 }
 
@@ -473,9 +484,10 @@ function getFunctionAtCursor() {
 
 // Editor event handlers
 editor.addEventListener('input', () => {
+    markAsChanged();
     updateHighlight();
     updateLineNumbers();
-    saveToLocalStorage();
+    // Don't auto-save code - only save inputs
 
     const word = getCurrentWord();
     if (word.length >= 2) {
@@ -571,7 +583,7 @@ document.addEventListener('click', (e) => {
 // ============= LOCAL STORAGE =============
 function saveToLocalStorage() {
     try {
-        localStorage.setItem('gridlang_code', editor.value);
+        // Only save inputs to localStorage automatically, not code
         localStorage.setItem('gridlang_inputs', JSON.stringify(inputs));
         localStorage.setItem('gridlang_currentInput', currentInputId);
     } catch (e) {
@@ -581,26 +593,10 @@ function saveToLocalStorage() {
 
 function loadFromLocalStorage() {
     try {
-        const savedCode = localStorage.getItem('gridlang_code');
         const savedInputs = localStorage.getItem('gridlang_inputs');
         const savedCurrentInput = localStorage.getItem('gridlang_currentInput');
 
-        if (savedCode !== null) {
-            // Migrate old 'def' syntax to 'func' and 'draw_grid' to 'init_2d'
-            let migratedCode = savedCode
-                .replace(/\bdef\s+/g, 'func ')
-                .replace(/\bdraw_grid\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g, 'init_2d([$1, $2], $3)')
-                .replace(/\bdraw_grid\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/g, 'init_2d([$1, $2])');
-
-            editor.value = migratedCode;
-
-            // Save migrated code back
-            if (migratedCode !== savedCode) {
-                localStorage.setItem('gridlang_code', migratedCode);
-            }
-
-            updateHighlight();
-        }
+        // Don't load old single 'gridlang_code' - we use the file system now
 
         if (savedInputs !== null) {
             inputs = JSON.parse(savedInputs);
@@ -697,6 +693,244 @@ deleteInputBtn.addEventListener('click', () => {
     }
 });
 
+// ============= FILE MANAGEMENT =============
+let savedFiles = { 'default': '' };
+let currentFileId = 'default';
+let hasUnsavedChanges = false;
+let lastSavedContent = '';
+
+function markAsChanged() {
+    if (editor.value !== lastSavedContent) {
+        hasUnsavedChanges = true;
+        if (dirtyIndicator) {
+            dirtyIndicator.style.color = '#fbbf24'; // Amber for unsaved
+            dirtyIndicator.title = 'Unsaved changes';
+        }
+    } else {
+        hasUnsavedChanges = false;
+        if (dirtyIndicator) {
+            dirtyIndicator.style.color = '#10b981'; // Green for saved
+            dirtyIndicator.title = 'All changes saved';
+        }
+    }
+}
+
+function checkUnsavedChanges(action) {
+    if (hasUnsavedChanges) {
+        return confirm(`You have unsaved changes in "${currentFileId}". ${action} will discard these changes. Continue?`);
+    }
+    return true;
+}
+
+function updateScriptSelect() {
+    // Build the YOUR FILES section
+    const filesGroup = document.createElement('optgroup');
+    filesGroup.label = '📁 YOUR FILES';
+    Object.keys(savedFiles).forEach(id => {
+        const option = document.createElement('option');
+        option.value = 'file:' + id;
+        option.textContent = id;
+        filesGroup.appendChild(option);
+    });
+    
+    // Build the EXAMPLES section
+    const examplesGroup = document.createElement('optgroup');
+    examplesGroup.label = '📚 EXAMPLES';
+    const exampleList = [
+        ['hello', 'Hello World'],
+        ['input_demo', 'Input Data Demo'],
+        ['grid', 'Simple Grid'],
+        ['checkerboard', 'Checkerboard'],
+        ['spiral', 'Spiral Pattern'],
+        ['wave_animation', '🎬 Wave Animation'],
+        ['bouncing_ball', '🎬 Bouncing Ball'],
+        ['recursive', 'Recursive Factorial'],
+        ['benchmark', 'Benchmarking'],
+        ['cube3d', '3D Cube'],
+        ['checker3d', '3D Checkerboard'],
+        ['spiral3d', '3D Spiral Tower'],
+        ['rotating_cube', '🎬 3D Wave Animation'],
+        ['mandelbrot', 'Mandelbrot Set']
+    ];
+    exampleList.forEach(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = 'example:' + value;
+        option.textContent = label;
+        examplesGroup.appendChild(option);
+    });
+    
+    // Rebuild the select
+    scriptSelect.innerHTML = '';
+    scriptSelect.appendChild(filesGroup);
+    scriptSelect.appendChild(examplesGroup);
+    scriptSelect.value = 'file:' + currentFileId;
+}
+
+function switchFile(fileId) {
+    if (!checkUnsavedChanges('Switching files')) {
+        // Reset select to current file
+        scriptSelect.value = 'file:' + currentFileId;
+        return;
+    }
+
+    // Don't save current file automatically - user must explicitly save
+    // Switch to new file
+    currentFileId = fileId;
+    editor.value = savedFiles[currentFileId] || '';
+    scriptSelect.value = 'file:' + currentFileId;
+
+    lastSavedContent = editor.value;
+    hasUnsavedChanges = false;
+    if (dirtyIndicator) {
+        dirtyIndicator.style.color = '#10b981';
+        dirtyIndicator.title = 'All changes saved';
+    }
+    updateHighlight();
+    updateLineNumbers();
+}
+
+function saveFilesToLocalStorage() {
+    try {
+        savedFiles[currentFileId] = editor.value;
+        lastSavedContent = editor.value;
+        hasUnsavedChanges = false;
+        if (dirtyIndicator) {
+            dirtyIndicator.style.color = '#10b981';
+            dirtyIndicator.title = 'All changes saved';
+        }
+        localStorage.setItem('gridlang_files', JSON.stringify(savedFiles));
+        localStorage.setItem('gridlang_currentFile', currentFileId);
+    } catch (e) {
+        console.error('Failed to save files to localStorage:', e);
+    }
+}
+
+function loadFilesFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem('gridlang_files');
+        const savedCurrent = localStorage.getItem('gridlang_currentFile');
+
+        if (saved !== null) {
+            savedFiles = JSON.parse(saved);
+            updateScriptSelect();
+        }
+
+        if (savedCurrent !== null && savedFiles[savedCurrent] !== undefined) {
+            currentFileId = savedCurrent;
+            scriptSelect.value = 'file:' + currentFileId;
+            editor.value = savedFiles[currentFileId];
+            lastSavedContent = editor.value;
+            hasUnsavedChanges = false;
+            if (dirtyIndicator) {
+                dirtyIndicator.style.color = '#10b981';
+                dirtyIndicator.title = 'All changes saved';
+            }
+            updateHighlight();
+            updateLineNumbers();
+        }
+    } catch (e) {
+        console.error('Failed to load files from localStorage:', e);
+    }
+}
+
+scriptSelect.addEventListener('change', (e) => {
+    const selection = e.target.value;
+    if (!selection) return;
+    
+    if (selection.startsWith('file:')) {
+        // User selected a saved file
+        const fileId = selection.substring(5); // Remove 'file:' prefix
+        switchFile(fileId);
+    } else if (selection.startsWith('example:')) {
+        // User selected an example
+        const exampleId = selection.substring(8); // Remove 'example:' prefix
+        if (examples[exampleId]) {
+            if (!checkUnsavedChanges('Loading an example')) {
+                // Reset select to current file
+                scriptSelect.value = 'file:' + currentFileId;
+                return;
+            }
+            
+            editor.value = examples[exampleId];
+            lastSavedContent = editor.value;
+            hasUnsavedChanges = false;
+            if (dirtyIndicator) {
+                dirtyIndicator.style.color = '#10b981';
+                dirtyIndicator.title = 'All changes saved';
+            }
+            updateHighlight();
+            updateLineNumbers();
+            
+            // Auto-switch mode based on example name
+            if (exampleId.includes('3d') || exampleId.includes('cube')) {
+                switchMode('3d');
+            } else {
+                switchMode('2d');
+            }
+            
+            // Keep showing the example name in selector
+            scriptSelect.value = 'example:' + exampleId;
+        }
+    }
+});
+
+saveFileBtn.addEventListener('click', () => {
+    savedFiles[currentFileId] = editor.value;
+    saveFilesToLocalStorage();
+    // No alert - just update the dirty indicator
+});
+
+saveAsBtn.addEventListener('click', () => {
+    const name = prompt('Enter file name:');
+    if (name && name.trim()) {
+        const trimmedName = name.trim();
+        savedFiles[trimmedName] = editor.value;
+        currentFileId = trimmedName;
+        lastSavedContent = editor.value;
+        hasUnsavedChanges = false;
+        if (dirtyIndicator) {
+            dirtyIndicator.style.color = '#10b981';
+            dirtyIndicator.title = 'All changes saved';
+        }
+        updateScriptSelect();
+        saveFilesToLocalStorage();
+    }
+});
+
+renameFileBtn.addEventListener('click', () => {
+    if (currentFileId === 'default') {
+        alert('Cannot rename default file!');
+        return;
+    }
+
+    const newName = prompt('Enter new name:', currentFileId);
+    if (newName && newName.trim() && newName !== currentFileId) {
+        if (savedFiles[newName]) {
+            alert('File with that name already exists!');
+            return;
+        }
+        savedFiles[newName.trim()] = savedFiles[currentFileId];
+        delete savedFiles[currentFileId];
+        currentFileId = newName.trim();
+        updateScriptSelect();
+        saveFilesToLocalStorage();
+    }
+});
+
+deleteFileBtn.addEventListener('click', () => {
+    if (currentFileId === 'default') {
+        alert('Cannot delete default file!');
+        return;
+    }
+
+    if (confirm(`Delete file "${currentFileId}"?`)) {
+        delete savedFiles[currentFileId];
+        currentFileId = 'default';
+        updateScriptSelect();
+        switchFile('default');
+    }
+});
+
 // Horizontal resizer (code/input)
 let isResizingHorizontal = false;
 let startYHorizontal = 0;
@@ -737,7 +971,18 @@ document.addEventListener('mouseup', () => {
 
 // Load saved data on startup
 loadFromLocalStorage();
+loadFilesFromLocalStorage();
 updateInputSelect();
+updateScriptSelect();
+
+// Warn on page unload if there are unsaved changes
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+    }
+});
 
 // Syntax highlighting using Prism
 function updateHighlight() {
@@ -788,7 +1033,7 @@ function jumpToLine(lineNumber) {
 // Override Prism to highlight our built-in functions and keywords
 Prism.languages.insertBefore('python', 'function', {
     'builtin-function': {
-        pattern: /\b(print|range|len|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|time|clock|benchmark|animate|stop_animation|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid)(?=\s*\()/,
+        pattern: /\b(print|debug|set_debug|range|len|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|time|clock|benchmark|animate|stop_animation|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid)(?=\s*\()/,
         alias: 'function'
     }
 });
@@ -1219,6 +1464,9 @@ function runCode() {
     const code = editor.value;
     consoleEl.innerHTML = '';
 
+    // Start high-resolution timer
+    const startTime = performance.now();
+
     // Stop any running animation first
     if (currentInterpreter) {
         currentInterpreter.animationRunning = false;
@@ -1236,19 +1484,40 @@ function runCode() {
         const ast = parser.parse();
 
         const currentInput = inputs[currentInputId] || '';
-        currentInterpreter = new Interpreter(canvas, canvas3d, consoleEl, renderer3d, currentInput);
+        currentInterpreter = new Interpreter(canvas, canvas3d, consoleEl, renderer3d, currentInput, canvasContainer);
+        
+        // Set debug mode from checkbox
+        currentInterpreter.debugEnabled = debugCheckbox.checked;
+        
         currentInterpreter.run(ast);
 
-        // Show stop button if animation is running
+        // Transform run button to stop button if animation is running
         if (currentInterpreter.animationRunning) {
-            stopBtn.style.display = 'inline-block';
+            runBtn.textContent = '⏹';
+            runBtn.title = 'Stop';
+            runBtn.style.backgroundColor = '#dc2626'; // Red color
+            runBtn.style.color = 'white';
         }
 
+        // Calculate and display execution time
+        const endTime = performance.now();
+        const elapsed = endTime - startTime;
+        const formattedTime = formatExecutionTime(elapsed);
+        
+        consoleEl.innerHTML += `<span style="color:#10b981;font-weight:bold">\n✓ Completed in ${formattedTime}</span>\n`;
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+
     } catch (e) {
-        const line = document.createElement('div');
-        line.className = 'console-line error';
-        line.textContent = `Error: ${e.message}`;
-        consoleEl.appendChild(line);
+        // Calculate execution time even on error
+        const endTime = performance.now();
+        const elapsed = endTime - startTime;
+        const formattedTime = formatExecutionTime(elapsed);
+        
+        const escapedMsg = e.message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        consoleEl.innerHTML += `<span style="color:#f48771">${escapedMsg}</span>\n`;
+        consoleEl.innerHTML += `<span style="color:#ef4444;font-weight:bold">\n✗ Failed after ${formattedTime}</span>\n`;
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+        
         console.error(e);
 
         // Extract line number and jump to it
@@ -1257,6 +1526,20 @@ function runCode() {
             const errorLine = parseInt(lineMatch[1]);
             jumpToLine(errorLine);
         }
+    }
+}
+
+function formatExecutionTime(ms) {
+    if (ms < 1) {
+        return `${(ms * 1000).toFixed(2)}µs`;
+    } else if (ms < 1000) {
+        return `${ms.toFixed(2)}ms`;
+    } else if (ms < 60000) {
+        return `${(ms / 1000).toFixed(2)}s`;
+    } else {
+        const minutes = Math.floor(ms / 60000);
+        const seconds = ((ms % 60000) / 1000).toFixed(2);
+        return `${minutes}m ${seconds}s`;
     }
 }
 
@@ -1269,7 +1552,12 @@ function stopAnimation() {
             currentInterpreter.animationId = null;
         }
     }
-    stopBtn.style.display = 'none';
+    
+    // Restore run button appearance
+    runBtn.textContent = '▶';
+    runBtn.title = 'Run (Ctrl+Enter)';
+    runBtn.style.backgroundColor = '';
+    runBtn.style.color = '';
 
     const line = document.createElement('div');
     line.className = 'console-line output';
@@ -1290,26 +1578,15 @@ function clearCanvas() {
     }
 }
 
-runBtn.addEventListener('click', runCode);
-stopBtn.addEventListener('click', stopAnimation);
-clearBtn.addEventListener('click', clearCanvas);
-
-exampleSelect.addEventListener('change', (e) => {
-    const example = e.target.value;
-    if (example && examples[example]) {
-        editor.value = examples[example];
-        updateHighlight();
-        updateLineNumbers();
-        saveToLocalStorage();
-
-        // Auto-switch mode based on example name
-        if (example.includes('3d') || example.includes('cube')) {
-            switchMode('3d');
-        } else {
-            switchMode('2d');
-        }
+runBtn.addEventListener('click', () => {
+    // Check if we're in stop mode (animation running)
+    if (currentInterpreter && currentInterpreter.animationRunning) {
+        stopAnimation();
+    } else {
+        runCode();
     }
 });
+clearBtn.addEventListener('click', clearCanvas);
 
 // Resizer functionality
 const resizer = document.getElementById('resizer');

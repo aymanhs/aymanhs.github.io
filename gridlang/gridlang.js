@@ -41,27 +41,51 @@ class Environment {
 }
 
 class Interpreter {
-    constructor(canvas, canvas3d, consoleElement, renderer3d, inputData) {
+    constructor(canvas, canvas3d, consoleElement, renderer3d, inputData, canvasContainer) {
         this.canvas = canvas;
         this.canvas3d = canvas3d;
         this.ctx = canvas.getContext('2d');
         this.consoleElement = consoleElement;
         this.renderer3d = renderer3d;
         this.inputData = inputData || '';
+        this.canvasContainer = canvasContainer;
         this.globalEnv = new Environment();
         this.gridSize = 0;
         this.cellSize = 0;
         this.gridRows = 0;
         this.gridCols = 0;
+        this.renderingMode = 'console'; // 'console', '2d', or '3d'
+        
+        // Debug mode
+        this.debugEnabled = false;
+        
+        // Print buffer for performance
+        this.printBuffer = [];
+        this.printBufferSize = 100; // Flush every 100 lines
+        this.lastFlushTime = 0;
+        this.flushInterval = 50; // Flush every 50ms minimum
 
         this.setupBuiltins();
     }
 
     setupBuiltins() {
-        // Print function
+        // Print function with buffering
         this.globalEnv.set('print', (...args) => {
             const msg = args.map(a => this.toString(a)).join(' ');
-            this.log(msg, 'output');
+            this.logBuffered(msg, 'output');
+        });
+        
+        // Debug function - only outputs when debug is enabled
+        this.globalEnv.set('debug', (...args) => {
+            if (this.debugEnabled) {
+                const msg = args.map(a => this.toString(a)).join(' ');
+                this.logBuffered(msg, 'debug');
+            }
+        });
+        
+        // Enable/disable debug output
+        this.globalEnv.set('set_debug', (enabled) => {
+            this.debugEnabled = !!enabled;
         });
 
         // Range function
@@ -259,6 +283,10 @@ class Interpreter {
         // Grid drawing functions
         this.globalEnv.set('init_2d', (gridSize, cellSize = 20) => {
             // Auto-switch to 2D mode
+            this.renderingMode = '2d';
+            if (this.canvasContainer) {
+                this.canvasContainer.classList.remove('console-only');
+            }
             this.canvas.style.display = 'block';
             this.canvas3d.style.display = 'none';
 
@@ -365,6 +393,10 @@ class Interpreter {
         this.globalEnv.set('init_3d', (voxelSize = 8, spacing = 10) => {
             if (this.renderer3d) {
                 // Auto-show 3D canvas
+                this.renderingMode = '3d';
+                if (this.canvasContainer) {
+                    this.canvasContainer.classList.remove('console-only');
+                }
                 this.canvas.style.display = 'none';
                 this.canvas3d.style.display = 'block';
 
@@ -582,11 +614,43 @@ class Interpreter {
         });
     }
 
+    logBuffered(message, type = 'output') {
+        // Store HTML with color spans for better performance
+        let color;
+        if (type === 'error') {
+            color = '#f48771';
+        } else if (type === 'debug') {
+            color = '#888888'; // Grey for debug
+        } else {
+            color = '#4fc1ff'; // Blue for normal output
+        }
+        const escapedMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        this.printBuffer.push(`<span style="color:${color}">${escapedMsg}</span>`);
+        
+        // Flush if buffer is full or enough time has passed
+        const now = performance.now();
+        if (this.printBuffer.length >= this.printBufferSize || 
+            (now - this.lastFlushTime) >= this.flushInterval) {
+            this.flushPrintBuffer();
+        }
+    }
+    
+    flushPrintBuffer() {
+        if (this.printBuffer.length === 0) return;
+        
+        // Append all buffered HTML spans at once - maintains color and performance
+        this.consoleElement.innerHTML += this.printBuffer.join('\n') + '\n';
+        this.consoleElement.scrollTop = this.consoleElement.scrollHeight;
+        
+        this.printBuffer = [];
+        this.lastFlushTime = performance.now();
+    }
+
     log(message, type = 'output') {
-        const line = document.createElement('div');
-        line.className = `console-line ${type}`;
-        line.textContent = message;
-        this.consoleElement.appendChild(line);
+        // Direct logging for non-print messages (errors, benchmarks, etc.)
+        const color = type === 'error' ? '#f48771' : '#10b981';
+        const escapedMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        this.consoleElement.innerHTML += `<span style="color:${color}">${escapedMsg}</span>\n`;
         this.consoleElement.scrollTop = this.consoleElement.scrollHeight;
     }
 
@@ -610,8 +674,19 @@ class Interpreter {
 
     run(ast) {
         try {
+            // Start in console-only mode
+            this.renderingMode = 'console';
+            if (this.canvasContainer) {
+                this.canvasContainer.classList.add('console-only');
+            }
+            
             this.eval(ast, this.globalEnv);
+            
+            // Flush any remaining buffered prints
+            this.flushPrintBuffer();
         } catch (e) {
+            // Flush buffer even on error
+            this.flushPrintBuffer();
             if (!(e instanceof ReturnValue)) {
                 throw e;
             }

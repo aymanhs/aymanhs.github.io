@@ -86,6 +86,15 @@
             background: #7c7c7c;
         }
 
+        button.small {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .toolbar #fileSelect {
+            max-width: 200px;
+        }
+
         .editor-container {
             flex: 1;
             position: relative;
@@ -228,6 +237,10 @@
             display: none;
         }
 
+        .canvas-container.console-only + .resizer {
+            display: none;
+        }
+
         .resizer {
             height: 5px;
             background: #2d2d30;
@@ -315,23 +328,16 @@
         }
 
         .console {
-            height: 150px;
+            flex: 1;
+            min-height: 150px;
             background: #1e1e1e;
             overflow-y: auto;
             padding: 10px;
             font-size: 13px;
-        }
-
-        .console-line {
-            margin-bottom: 5px;
-        }
-
-        .console-line.error {
-            color: #f48771;
-        }
-
-        .console-line.output {
             color: #4fc1ff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
         }
 
         select {
@@ -552,28 +558,41 @@
     <div class="container">
         <div class="editor-panel">
             <div class="toolbar">
-                <select id="exampleSelect" title="Choose an example">
-                    <option value="">Choose an example...</option>
-                    <option value="hello">Hello World</option>
-                    <option value="input_demo">Input Data Demo</option>
-                    <option value="grid">Simple Grid</option>
-                    <option value="checkerboard">Checkerboard</option>
-                    <option value="spiral">Spiral Pattern</option>
-                    <option value="wave_animation">🎬 Wave Animation</option>
-                    <option value="bouncing_ball">🎬 Bouncing Ball</option>
-                    <option value="recursive">Recursive Factorial</option>
-                    <option value="benchmark">Benchmarking</option>
-                    <option value="cube3d">3D Cube</option>
-                    <option value="checker3d">3D Checkerboard</option>
-                    <option value="spiral3d">3D Spiral Tower</option>
-                    <option value="rotating_cube">🎬 3D Wave Animation</option>
-                    <option value="mandelbrot">Mandelbrot Set</option>
+                <select id="scriptSelect" style="min-width: 200px;" title="Scripts and examples">
+                    <optgroup label="📁 YOUR FILES">
+                        <option value="file:default">Untitled</option>
+                    </optgroup>
+                    <optgroup label="📚 EXAMPLES">
+                        <option value="example:hello">Hello World</option>
+                        <option value="example:input_demo">Input Data Demo</option>
+                        <option value="example:grid">Simple Grid</option>
+                        <option value="example:checkerboard">Checkerboard</option>
+                        <option value="example:spiral">Spiral Pattern</option>
+                        <option value="example:wave_animation">🎬 Wave Animation</option>
+                        <option value="example:bouncing_ball">🎬 Bouncing Ball</option>
+                        <option value="example:recursive">Recursive Factorial</option>
+                        <option value="example:benchmark">Benchmarking</option>
+                        <option value="example:cube3d">3D Cube</option>
+                        <option value="example:checker3d">3D Checkerboard</option>
+                        <option value="example:spiral3d">3D Spiral Tower</option>
+                        <option value="example:rotating_cube">🎬 3D Wave Animation</option>
+                        <option value="example:mandelbrot">Mandelbrot Set</option>
+                    </optgroup>
                 </select>
+                <span id="dirtyIndicator" style="color: #10b981; font-weight: bold; margin-left: 5px;" title="All changes saved">●</span>
+                <button id="saveFileBtn" class="small" title="Save current file">💾</button>
+                <button id="saveAsBtn" class="small" title="Save as new file">💾+</button>
+                <button id="renameFileBtn" class="small" title="Rename file">✏️</button>
+                <button id="deleteFileBtn" class="small" title="Delete file">🗑️</button>
+                <span style="margin: 0 10px; border-left: 1px solid #3e3e42;"></span>
                 <button id="runBtn" title="Run (Ctrl+Enter)">▶</button>
-                <button id="stopBtn" class="clear" style="display:none;" title="Stop">⏹</button>
                 <button id="clearBtn" class="clear" title="Clear Canvas">🗑</button>
                 <button id="statsBtn" class="clear" title="Toggle Stats">📊</button>
                 <button id="helpBtn" title="Help">❓</button>
+                <label style="margin-left: 10px; font-size: 12px; cursor: pointer;">
+                    <input type="checkbox" id="debugCheckbox" style="vertical-align: middle;">
+                    Debug
+                </label>
             </div>
 
             <div class="editor-content">
@@ -621,7 +640,7 @@ print("Pattern complete!")</textarea>
         </div>
 
         <div class="output-panel">
-            <div class="canvas-container" id="canvasContainer">
+            <div class="canvas-container console-only" id="canvasContainer">
                 <canvas id="canvas"></canvas>
                 <canvas id="canvas3d"></canvas>
             </div>

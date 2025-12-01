@@ -170,7 +170,9 @@ input_grid()                          # Parse as 2D character grid
 
 ### Utilities
 ```go
-print(...)                            # Print to console
+print(...)                            # Print to console (blue)
+debug(...)                            # Print only when debug enabled (grey)
+set_debug(enabled)                    # Enable/disable debug output
 range(n)                              # [0, 1, ..., n-1]
 range(start, end)                     # [start, ..., end-1]
 len(arr)                              # Length of array/map/string
