@@ -306,8 +306,13 @@ const builtinFunctions = {
         { name: "time()", desc: "Current timestamp in seconds." },
         { name: "clock()", desc: "High-resolution performance timer in seconds." },
         { name: "benchmark(func, iterations=1)", desc: "Measure execution time of a function." },
-        { name: "animate(callback, fps=30)", desc: "Run callback repeatedly. Callback receives elapsed time in seconds. Use for animations!" },
+        { name: "animate(callback, options)", desc: "Run callback at 60fps. Callback receives elapsed time. Return false to stop." },
         { name: "stop_animation()", desc: "Stop the current animation loop." },
+        { name: "record_animation()", desc: "Start recording animation frames with canvas snapshots." },
+        { name: "save_animation_gif(filename, delay=33)", desc: "Save recorded frames as animated GIF. Delay in milliseconds (33ms ≈ 30fps)." },
+        { name: "stop_recording()", desc: "Stop recording frames." },
+        { name: "clear_recording()", desc: "Clear all recorded frames." },
+        { name: "get_animation_frames()", desc: "Get recording info: frame count, recording status, mode." },
         { name: "assert(condition, message='Assertion failed')", desc: "Throws error if condition is false. Use for runtime checks and testing." },
     ],
     "2D Drawing": [
@@ -500,6 +505,10 @@ function loadFromURL() {
             const code = decompressCode(codeParam);
             if (code) {
                 editor.value = code;
+                // Update Ace editor if it exists
+                if (window.setEditorCode) {
+                    window.setEditorCode(code);
+                }
                 updateHighlight();
                 updateLineNumbers();
                 showToast('Code loaded from URL!');
@@ -1045,6 +1054,10 @@ function switchFile(fileId) {
     // Switch to new file
     currentFileId = fileId;
     editor.value = savedFiles[currentFileId] || '';
+    // Update Ace editor if it exists
+    if (window.setEditorCode) {
+        window.setEditorCode(savedFiles[currentFileId] || '');
+    }
     scriptSelect.value = 'file:' + currentFileId;
 
     lastSavedContent = editor.value;
@@ -1091,6 +1104,10 @@ function loadFilesFromLocalStorage() {
             currentFileId = savedCurrent;
             scriptSelect.value = 'file:' + currentFileId;
             editor.value = savedFiles[currentFileId];
+            // Update Ace editor if it exists
+            if (window.setEditorCode) {
+                window.setEditorCode(savedFiles[currentFileId]);
+            }
             lastSavedContent = editor.value;
             hasUnsavedChanges = false;
             if (dirtyIndicator) {
@@ -1124,6 +1141,10 @@ scriptSelect.addEventListener('change', (e) => {
             }
             
             editor.value = examples[exampleId];
+            // Update Ace editor if it exists
+            if (window.setEditorCode) {
+                window.setEditorCode(examples[exampleId]);
+            }
             lastSavedContent = editor.value;
             hasUnsavedChanges = false;
             if (dirtyIndicator) {
@@ -1308,7 +1329,7 @@ function jumpToLine(lineNumber) {
 // Override Prism to highlight our built-in functions and keywords
 Prism.languages.insertBefore('python', 'function', {
     'builtin-function': {
-        pattern: /\b(print|debug|set_debug|range|len|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|time|clock|benchmark|animate|stop_animation|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid)(?=\s*\()/,
+        pattern: /\b(print|debug|set_debug|range|len|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|time|clock|benchmark|animate|stop_animation|record_animation|save_animation_gif|stop_recording|clear_recording|get_animation_frames|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid)(?=\s*\()/,
         alias: 'function'
     }
 });
@@ -1778,6 +1799,9 @@ function runCode() {
             runBtn.title = 'Stop';
             runBtn.style.backgroundColor = '#dc2626'; // Red color
             runBtn.style.color = 'white';
+            
+            // Set callback to reset button when animation stops
+            currentInterpreter.onAnimationStop = resetRunButton;
         }
 
         // Calculate and display execution time
@@ -1843,6 +1867,13 @@ function formatExecutionTime(ms) {
     }
 }
 
+function resetRunButton() {
+    runBtn.textContent = '▶';
+    runBtn.title = 'Run (Ctrl+Enter)';
+    runBtn.style.backgroundColor = '';
+    runBtn.style.color = '';
+}
+
 function stopAnimation() {
     if (currentInterpreter) {
         currentInterpreter.animationRunning = false;
@@ -1853,11 +1884,7 @@ function stopAnimation() {
         }
     }
     
-    // Restore run button appearance
-    runBtn.textContent = '▶';
-    runBtn.title = 'Run (Ctrl+Enter)';
-    runBtn.style.backgroundColor = '';
-    runBtn.style.color = '';
+    resetRunButton();
 
     const line = document.createElement('div');
     line.className = 'console-line output';

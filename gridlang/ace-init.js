@@ -309,7 +309,10 @@ function addGridLangCompleters() {
                 { name: 'clock', value: 'clock', score: 100, meta: 'time' },
                 { name: 'benchmark', value: 'benchmark', score: 100, meta: 'time' },
                 { name: 'animate', value: 'animate', score: 100, meta: 'animation' },
-                { name: 'stop_animation', value: 'stop_animation', score: 100, meta: 'animation' }
+                { name: 'stop_animation', value: 'stop_animation', score: 100, meta: 'animation' },
+                { name: 'record_animation', value: 'record_animation', score: 100, meta: 'animation' },
+                { name: 'save_animation', value: 'save_animation', score: 100, meta: 'animation' },
+                { name: 'get_animation_frames', value: 'get_animation_frames', score: 100, meta: 'animation' }
             ];
 
             // Filter by prefix

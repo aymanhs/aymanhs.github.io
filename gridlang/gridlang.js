@@ -152,6 +152,10 @@ class Interpreter {
         this.flushInterval = 50; // Flush every 50ms minimum
         this.cachedConsoleHTML = ''; // Cache innerHTML to avoid DOM reads
 
+        // Animation recording
+        this.recordingFrames = [];
+        this.isRecording = false;
+
         this.setupBuiltins();
     }
 
@@ -622,50 +626,35 @@ class Interpreter {
             return elapsed;
         });
 
-        // Animation function
-        this.globalEnv.set('animate', (callback, fps = 30, options = null) => {
+        // Animation function - uses requestAnimationFrame for smooth 60fps animations
+        this.globalEnv.set('animate', (callback, options = null) => {
             if (typeof callback !== 'function') {
                 throw new Error('animate() requires a function as first argument');
             }
 
-            // Handle options (can be passed as 2nd or 3rd argument, can be Map or object)
-            let actualFps = fps;
-            let actualOptions = options;
-
-            // If 2nd arg is a Map or object, use it as options
-            if (fps instanceof Map || (typeof fps === 'object' && fps !== null && !Array.isArray(fps))) {
-                actualOptions = fps;
-                // Check if fps is specified in the options
-                if (actualOptions instanceof Map) {
-                    actualFps = actualOptions.get('fps') || 30;
-                } else {
-                    actualFps = actualOptions.fps || 30;
-                }
-            }
-
-            // Convert Map to object for easier access
+            // Handle options parameter
             let opts = { clear3d: false, batch3d: true };
-            if (actualOptions instanceof Map) {
-                actualOptions.forEach((value, key) => {
+            if (options instanceof Map) {
+                options.forEach((value, key) => {
                     opts[key] = value;
                 });
-            } else if (actualOptions) {
-                opts = { ...opts, ...actualOptions };
+            } else if (options && typeof options === 'object') {
+                opts = { ...opts, ...options };
             }
 
             // Stop any existing animation
             if (this.animationId) {
                 cancelAnimationFrame(this.animationId);
-                clearInterval(this.animationInterval);
             }
 
             this.animationRunning = true;
             this.animationStartTime = performance.now() / 1000;
-            const frameDelay = 1000 / actualFps;
+            let frameCount = 0;
 
             const animate = () => {
                 if (!this.animationRunning) return;
 
+                frameCount++;
                 const currentTime = performance.now() / 1000;
                 const elapsed = currentTime - this.animationStartTime;
 
@@ -680,34 +669,169 @@ class Interpreter {
                         this.renderer3d.clear(false); // Don't reset camera during animation
                     }
 
-                    callback(elapsed);
+                    // Call callback and check if it returns false to stop
+                    const result = callback(elapsed);
+                    
+                    if (result === false) {
+                        this.animationRunning = false;
+                        // End batch if enabled
+                        if (opts.batch3d && this.renderer3d) {
+                            this.renderer3d.endBatch();
+                        }
+                        const totalTime = elapsed.toFixed(3);
+                        this.log(`Animation stopped: ${frameCount} frames in ${totalTime}s (avg: ${(frameCount / elapsed).toFixed(1)} fps)`, 'output');
+                        // Call stop callback if provided
+                        if (this.onAnimationStop) {
+                            this.onAnimationStop();
+                        }
+                        return;
+                    }
 
                     // End batch if enabled
                     if (opts.batch3d && this.renderer3d) {
                         this.renderer3d.endBatch();
                     }
+
+                    // Capture frame if recording
+                    if (this.isRecording) {
+                        const frameData = {
+                            elapsed: elapsed,
+                            timestamp: performance.now()
+                        };
+                        if (this.canvas && this.renderingMode === '2d') {
+                            frameData.imageData = this.canvas.toDataURL('image/png');
+                        } else if (this.canvas3d && this.renderingMode === '3d') {
+                            frameData.imageData = this.canvas3d.toDataURL('image/png');
+                        }
+                        this.recordingFrames.push(frameData);
+                    }
                 } catch (e) {
                     this.log(`Animation error: ${e.message}`, 'error');
                     this.animationRunning = false;
+                    const totalTime = (performance.now() / 1000 - this.animationStartTime).toFixed(3);
+                    this.log(`Animation stopped: ${frameCount} frames in ${totalTime}s`, 'output');
+                    // Call stop callback if provided
+                    if (this.onAnimationStop) {
+                        this.onAnimationStop();
+                    }
                     return;
                 }
 
-                this.animationId = setTimeout(() => {
-                    requestAnimationFrame(animate);
-                }, frameDelay);
+                // Schedule next frame
+                if (this.animationRunning) {
+                    this.animationId = requestAnimationFrame(animate);
+                }
             };
 
-            animate();
+            this.animationId = requestAnimationFrame(animate);
         });
 
         // Stop animation
         this.globalEnv.set('stop_animation', () => {
-            this.animationRunning = false;
-            if (this.animationId) {
-                cancelAnimationFrame(this.animationId);
-                clearInterval(this.animationInterval);
-                this.animationId = null;
+            if (this.animationRunning) {
+                this.animationRunning = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    clearInterval(this.animationInterval);
+                    this.animationId = null;
+                }
+                this.log('Animation stopped by stop_animation()', 'output');
             }
+        });
+
+        // Start recording animation frames
+        this.globalEnv.set('record_animation', () => {
+            this.recordingFrames = [];
+            this.isRecording = true;
+            this.log('Recording animation frames...', 'output');
+        });
+
+        // Save animation as animated GIF
+        this.globalEnv.set('save_animation_gif', (filename = 'animation.gif', delay = 33) => {
+            if (!this.isRecording && this.recordingFrames.length === 0) {
+                throw new Error('No animation frames recorded. Call record_animation() first and run an animation.');
+            }
+
+            this.isRecording = false;
+            
+            if (this.recordingFrames.length === 0) {
+                this.log('No frames to save', 'error');
+                return;
+            }
+
+            this.log(`Creating GIF from ${this.recordingFrames.length} frames...`, 'output');
+            
+            // Use GIF.js library
+            if (typeof GIF === 'undefined') {
+                throw new Error('GIF library not loaded');
+            }
+
+            const gif = new GIF({
+                workers: 2,
+                quality: 10,
+                workerScript: 'gif.worker.js'
+            });
+
+            // Load all images and add frames to GIF
+            let loadedCount = 0;
+            const totalFrames = this.recordingFrames.length;
+
+            this.recordingFrames.forEach((frameData, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    gif.addFrame(img, { delay: delay, copy: true });
+                    loadedCount++;
+                    
+                    // Start rendering when all frames are loaded
+                    if (loadedCount === totalFrames) {
+                        this.log('All frames loaded, rendering GIF...', 'output');
+                        gif.render();
+                    }
+                };
+                img.onerror = () => {
+                    this.log(`Failed to load frame ${index}`, 'error');
+                    loadedCount++;
+                    if (loadedCount === totalFrames) {
+                        gif.render();
+                    }
+                };
+                img.src = frameData.imageData;
+            });
+
+            gif.on('finished', (blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.log(`GIF saved: ${filename} (${totalFrames} frames)`, 'output');
+            });
+        });
+
+        // Stop recording
+        this.globalEnv.set('stop_recording', () => {
+            if (this.isRecording) {
+                this.isRecording = false;
+                this.log(`Recording stopped: ${this.recordingFrames.length} frames captured`, 'output');
+            }
+        });
+
+        // Clear recorded frames
+        this.globalEnv.set('clear_recording', () => {
+            this.recordingFrames = [];
+            this.isRecording = false;
+            this.log('Recording cleared', 'output');
+        });
+
+        // Get recorded frames info
+        this.globalEnv.set('get_animation_frames', () => {
+            return JSON.stringify({
+                frameCount: this.recordingFrames.length,
+                isRecording: this.isRecording,
+                renderingMode: this.renderingMode,
+                timestamp: new Date().toISOString()
+            });
         });
     }
 

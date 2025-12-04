@@ -194,12 +194,21 @@ end_3d_batch()
 
 ### Animation
 ```go
-animate(callback, fps)                # Start animation loop
-animate(callback, fps, {              # With options
+animate(callback, options)            # Start animation loop (60fps)
+                                      # Callback receives elapsed time
+                                      # Return false to stop
+animate(callback, {                   # With options
     clear3d: true,                    # Auto-clear 3D scene
     batch3d: true                     # Auto-batch 3D updates
 })
 stop_animation()                      # Stop current animation
+
+# Animation Recording
+record_animation()                    # Start recording frames
+save_animation_gif('file.gif', 33)    # Save as animated GIF (delay in ms)
+stop_recording()                      # Stop recording
+clear_recording()                     # Clear recorded frames
+get_animation_frames()                # Get frame count & metadata
 ```
 
 ### Color Helpers
