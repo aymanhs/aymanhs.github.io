@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GridLang - Visual Scripting Language</title>
+    <!-- Ace Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ext-language_tools.min.js"></script>
+    <!-- Syntax highlighting fallback -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <!-- Version file: bump token here when releasing -->
@@ -282,6 +286,28 @@
             display: flex;
             flex-direction: column;
             min-height: 200px;
+        }
+
+        #ace-editor-container {
+            flex: 1;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .ace_editor {
+            background: #1e1e1e !important;
+            color: #d4d4d4 !important;
+        }
+
+        .ace_gutter {
+            background: #1a1a1a !important;
+        }
+
+        .ace_gutter-cell {
+            color: #858585 !important;
+        }
+
+        .ace_cursor {
+            color: #d4d4d4 !important;
         }
 
         .horizontal-resizer {
@@ -698,7 +724,10 @@
 
             <div class="editor-content">
                 <div class="code-section">
-                    <div class="editor-container">
+                    <!-- Ace Editor container -->
+                    <div id="ace-editor-container"></div>
+                    <!-- Fallback textarea and elements (hidden when Ace loads) -->
+                    <div class="editor-container" style="display: none;">
                         <div id="lineNumbers" class="line-numbers"></div>
                         <pre id="highlight" aria-hidden="true"><code class="language-python"></code></pre>
                         <textarea id="editor" spellcheck="false"># Welcome to GridLang!
@@ -806,10 +835,12 @@ print("Pattern complete!")</textarea>
     <script src="parser.js" id="script-parser"></script>
     <script src="renderer3d.js" id="script-renderer"></script>
     <script src="gridlang.js" id="script-gridlang"></script>
+    <script src="gridlang-ace-mode.js" id="script-ace-mode"></script>
+    <script src="ace-init.js" id="script-ace"></script>
     <script src="ui.js" id="script-ui"></script>
     <script>
         // Apply cache-busting to local asset scripts
-        ['script-lexer','script-parser','script-renderer','script-gridlang','script-ui'].forEach(id => {
+        ['script-lexer','script-parser','script-renderer','script-gridlang','script-ace-mode','script-ace','script-ui'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.src = withVersion(el.getAttribute('src'));
         });
