@@ -311,7 +311,9 @@ function addGridLangCompleters() {
                 { name: 'animate', value: 'animate', score: 100, meta: 'animation' },
                 { name: 'stop_animation', value: 'stop_animation', score: 100, meta: 'animation' },
                 { name: 'record_animation', value: 'record_animation', score: 100, meta: 'animation' },
-                { name: 'save_animation', value: 'save_animation', score: 100, meta: 'animation' },
+                { name: 'save_animation_gif', value: 'save_animation_gif', score: 100, meta: 'animation' },
+                { name: 'stop_recording', value: 'stop_recording', score: 100, meta: 'animation' },
+                { name: 'clear_recording', value: 'clear_recording', score: 100, meta: 'animation' },
                 { name: 'get_animation_frames', value: 'get_animation_frames', score: 100, meta: 'animation' }
             ];
 
