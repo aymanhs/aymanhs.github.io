@@ -21,6 +21,130 @@ class GridLangError extends Error {
     }
 }
 
+// ============= GRID OBJECT =============
+class GridObject {
+    constructor(data, interpreter) {
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new GridLangError('Grid requires a 2D array', null, null, 'TypeError');
+        }
+        if (!Array.isArray(data[0])) {
+            throw new GridLangError('Grid requires a 2D array', null, null, 'TypeError');
+        }
+        
+        this.data = data;
+        this.interpreter = interpreter;
+        this.height = data.length;
+        this.width = data[0].length;
+        this.diags = false; // Default: 4-directional (no diagonals)
+        this.cellSize = 10; // Default cell size in pixels
+        this.colorMap = {
+            '.': '#f0f0f0',
+            '#': '#333333'
+        }; // Default colorMap for common AoC patterns
+    }
+
+    get(x, y) {
+        if (!this.inBounds(x, y)) {
+            return null;
+        }
+        return this.data[y][x];
+    }
+
+    set(x, y, value) {
+        if (!this.inBounds(x, y)) {
+            throw new GridLangError(`Grid index out of bounds: (${x}, ${y})`, null, null, 'IndexError');
+        }
+        this.data[y][x] = value;
+    }
+
+    inBounds(x, y) {
+        return x >= 0 && x < this.width && y >= 0 && y < this.height;
+    }
+
+    neighbors(x, y, callback) {
+        const directions = this.diags
+            ? [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]
+            : [[0, -1], [-1, 0], [1, 0], [0, 1]]; // 4-directional: up, left, right, down
+
+        for (const [dx, dy] of directions) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (this.inBounds(nx, ny)) {
+                callback(nx, ny, this.data[ny][nx]);
+            }
+        }
+    }    visit(callback) {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                callback(x, y, this.data[y][x]);
+            }
+        }
+    }
+
+    find(predicate) {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                if (predicate(this.data[y][x])) {
+                    return [x, y];
+                }
+            }
+        }
+        return null;
+    }
+
+    count(value) {
+        let total = 0;
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                if (this.data[y][x] === value) {
+                    total++;
+                }
+            }
+        }
+        return total;
+    }
+
+    draw() {
+        if (!this.interpreter.canvas || !this.interpreter.ctx) {
+            throw new GridLangError('Canvas not available', null, null, 'RuntimeError');
+        }
+
+        const ctx = this.interpreter.ctx;
+        const canvas = this.interpreter.canvas;
+
+        // Resize canvas if needed
+        const requiredWidth = this.width * this.cellSize;
+        const requiredHeight = this.height * this.cellSize;
+        
+        if (canvas.width !== requiredWidth || canvas.height !== requiredHeight) {
+            canvas.width = requiredWidth;
+            canvas.height = requiredHeight;
+        }
+
+        // Draw each cell
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const value = this.data[y][x];
+                // Handle both Map and plain object colorMaps
+                let color;
+                if (this.colorMap instanceof Map) {
+                    color = this.colorMap.get(value) || '#ffffff';
+                } else {
+                    color = this.colorMap[value] || '#ffffff';
+                }
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+                
+                // Draw grid lines
+                ctx.strokeStyle = '#cccccc';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+            }
+        }
+    }
+}
+
 // GridLang Interpreter - Runtime execution
 // ============= INTERPRETER =============
 class ReturnValue {
@@ -833,6 +957,11 @@ class Interpreter {
                 timestamp: new Date().toISOString()
             });
         });
+
+        // Grid constructor
+        this.globalEnv.set('Grid', (data) => {
+            return new GridObject(data, this);
+        });
     }
 
     logBuffered(message, type = 'output') {
@@ -1050,6 +1179,28 @@ class Interpreter {
                 }
                 return value;
 
+            case 'MultiAssignment': {
+                const values = this.eval(node.value, env);
+                
+                if (!Array.isArray(values)) {
+                    throw new GridLangError('Multiple assignment requires an array or iterable on the right side', node.line, node.col, 'TypeError');
+                }
+                
+                // Assign each value to corresponding target
+                for (let i = 0; i < node.targets.length; i++) {
+                    const target = node.targets[i];
+                    const val = i < values.length ? values[i] : null;
+                    
+                    try {
+                        env.update(target, val);
+                    } catch (e) {
+                        env.set(target, val);
+                    }
+                }
+                
+                return values;
+            }
+
             case 'IndexAssignment': {
                 const obj = this.eval(node.object, env);
                 const index = this.eval(node.index, env);
@@ -1070,6 +1221,24 @@ class Interpreter {
 
                 if (obj instanceof Map) {
                     obj.set(property, val);
+                } else if (obj instanceof GridObject) {
+                    // Handle Grid property assignment
+                    switch (property) {
+                        case 'diags':
+                            obj.diags = !!val;
+                            break;
+                        case 'cellSize':
+                            obj.cellSize = val;
+                            break;
+                        case 'colorMap':
+                            if (typeof val !== 'object') {
+                                throw new GridLangError('Grid.colorMap must be an object', node.line, node.col, 'TypeError');
+                            }
+                            obj.colorMap = val;
+                            break;
+                        default:
+                            throw new GridLangError(`Cannot assign to Grid.${property}`, node.line, node.col, 'AttributeError');
+                    }
                 }
                 return val;
             }
@@ -1113,6 +1282,9 @@ class Interpreter {
                     return obj.get(index);
                 } else if (typeof obj === 'string') {
                     return obj[index];
+                } else if (typeof obj === 'object' && obj !== null) {
+                    // Handle plain objects (like colorMap)
+                    return obj[index] !== undefined ? obj[index] : null;
                 }
                 return null;
             }
@@ -1243,6 +1415,38 @@ class Interpreter {
                                 if (typeof fn !== 'function') throw new Error('every() requires a function');
                                 return obj.every(item => fn(item));
                             };
+                    }
+                }
+                
+                // Handle Grid object properties and methods
+                if (obj instanceof GridObject) {
+                    switch (property) {
+                        case 'width':
+                            return obj.width;
+                        case 'height':
+                            return obj.height;
+                        case 'diags':
+                            return obj.diags;
+                        case 'cellSize':
+                            return obj.cellSize;
+                        case 'colorMap':
+                            return obj.colorMap;
+                        case 'get':
+                            return (x, y) => obj.get(x, y);
+                        case 'set':
+                            return (x, y, val) => obj.set(x, y, val);
+                        case 'inBounds':
+                            return (x, y) => obj.inBounds(x, y);
+                        case 'neighbors':
+                            return (x, y, callback) => obj.neighbors(x, y, callback);
+                        case 'visit':
+                            return (callback) => obj.visit(callback);
+                        case 'find':
+                            return (predicate) => obj.find(predicate);
+                        case 'count':
+                            return (value) => obj.count(value);
+                        case 'draw':
+                            return () => obj.draw();
                     }
                 }
                 

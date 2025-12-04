@@ -7,8 +7,10 @@ A fast scripting language with built-in 2D grid and 3D voxel rendering capabilit
 ✅ **Go-like syntax** - Clean with `func` and braces  
 ✅ **Arithmetic operations** - `+`, `-`, `*`, `/`, `%`, `**`  
 ✅ **Compound assignments** - `+=`, `-=`, `*=`, `/=`, `%=`  
+✅ **Multiple assignment** - Destructuring: `a, b, c = [1, 2, 3]`  
 ✅ **Arrays** - Including multi-dimensional: `[[1,2], [3,4]]`  
 ✅ **Maps/Objects** - JS-style: `{x: 10, y: 20}` with dot notation  
+✅ **Grid object** - For 2D grids with visualization and pathfinding helpers  
 ✅ **Template strings** - Python f-strings: `f"Hello {name}!"`  
 ✅ **Functions** - With recursion support  
 ✅ **Control flow** - `if/elsif/else`, `for`, `while`  
@@ -141,6 +143,95 @@ count = 0
 for i = 0; i < 10; i += 1 {
     count += i   # Accumulate sum
 }
+```
+
+### Multiple Assignment (Destructuring)
+```go
+# Assign multiple variables at once from an array
+a, b, c = [1, 2, 3]
+print(a)  # 1
+print(b)  # 2
+print(c)  # 3
+
+# From function return values
+func getCoords() {
+    return [10, 20]
+}
+x, y = getCoords()
+
+# Swap values
+a = 1
+b = 2
+temp = [b, a]
+a, b = temp  # Now a=2, b=1
+
+# Works with Grid.find()
+grid = Grid([[".", "S"], [".", "."]])
+x, y = grid.find(func(v) { return v == "S" })
+print(f"Found at ({x}, {y})")  # Found at (1, 0)
+
+# Fewer values assigns null to remaining variables
+a, b, c = [1, 2]  # c becomes null
+```
+
+### Grid Object
+```go
+# Create a Grid from 2D array (useful for Advent of Code)
+grid = Grid([
+    [".", "#", "."],
+    ["#", ".", "#"],
+    [".", ".", "."]
+])
+
+# Grid properties
+print(grid.width)   # 3
+print(grid.height)  # 3
+print(grid.diags)   # false (default: 4-directional)
+
+# Get and set values
+val = grid.get(1, 1)  # Get value at (1, 1)
+grid.set(0, 0, "X")   # Set value at (0, 0)
+
+# Check bounds
+if grid.inBounds(x, y) {
+    print(grid.get(x, y))
+}
+
+# Find specific value
+pos = grid.find(func(v) { return v == "S" })
+if pos != null {
+    x, y = pos
+    print(f"Start at ({x}, {y})")
+}
+
+# Count occurrences
+wallCount = grid.count("#")
+
+# Visit all cells
+grid.visit(func(x, y, value) {
+    print(f"Cell ({x}, {y}) = {value}")
+})
+
+# Visit neighbors with callback (4-directional by default)
+grid.neighbors(1, 1, func(x, y, value) {
+    print(f"Neighbor at ({x}, {y}) = {value}")
+})
+
+# Include diagonals (8-directional)
+grid.diags = true
+grid.neighbors(1, 1, func(x, y, value) {
+    print(f"Neighbor at ({x}, {y}) = {value}")  # Now includes diagonals
+})
+
+# Visualize the grid (has sensible defaults)
+grid.colorMap = {
+    ".": "white",
+    "#": "black",
+    "S": "green",
+    "E": "red"
+}
+grid.cellSize = 20  # Pixel size (default: 10)
+grid.draw()  # Renders to canvas
 ```
 
 ### Control Flow

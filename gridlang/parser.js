@@ -243,6 +243,59 @@ class Parser {
     assignment() {
         const expr = this.logicalOr();
         
+        // Check for multiple assignment: a, b, c = [1, 2, 3]
+        // Only if we see identifier followed by comma AND eventually an =
+        if (expr.type === 'Identifier' && this.match(TokenType.COMMA)) {
+            // Lookahead to see if this is actually multiple assignment
+            // We need to see: ident, ident, ... = value
+            const savedPos = this.pos;
+            let isMultiAssign = false;
+            
+            try {
+                // Try to parse identifiers separated by commas
+                while (this.match(TokenType.COMMA)) {
+                    this.advance();
+                    if (!this.match(TokenType.IDENT)) {
+                        break;
+                    }
+                    this.advance();
+                }
+                // Check if we hit an =
+                if (this.match(TokenType.ASSIGN)) {
+                    isMultiAssign = true;
+                }
+            } catch (e) {
+                // Parsing failed, not a multi-assignment
+            }
+            
+            // Reset position
+            this.pos = savedPos;
+            
+            if (isMultiAssign) {
+                const targets = [expr.name];
+                const loc = this.loc();
+                
+                // Collect all target identifiers
+                while (this.match(TokenType.COMMA)) {
+                    this.advance();
+                    if (!this.match(TokenType.IDENT)) {
+                        throw new GridLangError('Expected identifier in multiple assignment', loc.line, loc.col, 'SyntaxError');
+                    }
+                    targets.push(this.current().value);
+                    this.advance();
+                }
+                
+                // Expect =
+                if (!this.match(TokenType.ASSIGN)) {
+                    throw new GridLangError('Expected = in multiple assignment', loc.line, loc.col, 'SyntaxError');
+                }
+                this.advance();
+                
+                const value = this.assignment();
+                return { type: 'MultiAssignment', targets, value, ...loc };
+            }
+        }
+        
         // Check for compound assignment operators
         const compoundOps = {
             [TokenType.PLUS_ASSIGN]: '+',

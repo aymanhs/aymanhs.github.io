@@ -1,4 +1,5 @@
 # GridLang Development Checklist
+After any change, update versions.js and ensure we are doing cache-busting stuff.
 
 ## After Adding New Builtin Functions
 

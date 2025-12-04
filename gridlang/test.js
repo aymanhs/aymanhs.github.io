@@ -1780,6 +1780,157 @@ runner.test('README: Compound assignment examples work', () => {
     assertArrayEqual(result.output, ['2']);
 });
 
+// ============= MULTIPLE ASSIGNMENT TESTS =============
+runner.test('Parser: Parse multiple assignment', () => {
+    const ast = parse('a, b, c = [1, 2, 3]');
+    assertEqual(ast[0].expression.type, 'MultiAssignment');
+    assertArrayEqual(ast[0].expression.targets, ['a', 'b', 'c']);
+});
+
+runner.test('Runtime: Basic multiple assignment', () => {
+    const result = evaluate('a, b, c = [1, 2, 3]\nprint(a)\nprint(b)\nprint(c)');
+    assertArrayEqual(result.output, ['1', '2', '3']);
+});
+
+runner.test('Runtime: Multiple assignment from function', () => {
+    const result = evaluate('func getCoords() { return [10, 20] }\nx, y = getCoords()\nprint(x)\nprint(y)');
+    assertArrayEqual(result.output, ['10', '20']);
+});
+
+runner.test('Runtime: Multiple assignment with two variables', () => {
+    const result = evaluate('x, y = [5, 10]\nprint(x + y)');
+    assertArrayEqual(result.output, ['15']);
+});
+
+runner.test('Runtime: Multiple assignment fewer values', () => {
+    const result = evaluate('a, b, c = [1, 2]\nprint(a)\nprint(b)\nprint(c)');
+    assertArrayEqual(result.output, ['1', '2', 'null']);
+});
+
+runner.test('Runtime: Multiple assignment swap', () => {
+    const result = evaluate('a = 1\nb = 2\ntemp = [b, a]\na, b = temp\nprint(a)\nprint(b)');
+    assertArrayEqual(result.output, ['2', '1']);
+});
+
+// ============= GRID OBJECT TESTS =============
+runner.test('Grid: Create from 2D array', () => {
+    const result = evaluate('grid = Grid([[1, 2], [3, 4]])\nprint(grid.width)\nprint(grid.height)');
+    assertArrayEqual(result.output, ['2', '2']);
+});
+
+runner.test('Grid: Get value', () => {
+    const result = evaluate('grid = Grid([["a", "b"], ["c", "d"]])\nprint(grid.get(0, 0))\nprint(grid.get(1, 1))');
+    assertArrayEqual(result.output, ['a', 'd']);
+});
+
+runner.test('Grid: Set value', () => {
+    const result = evaluate('grid = Grid([[1, 2], [3, 4]])\ngrid.set(0, 0, 99)\nprint(grid.get(0, 0))');
+    assertArrayEqual(result.output, ['99']);
+});
+
+runner.test('Grid: inBounds check', () => {
+    const result = evaluate('grid = Grid([[1, 2], [3, 4]])\nprint(grid.inBounds(0, 0))\nprint(grid.inBounds(5, 5))\nprint(grid.inBounds(-1, 0))');
+    assertArrayEqual(result.output, ['true', 'false', 'false']);
+});
+
+runner.test('Grid: neighbors 4-directional', () => {
+    const result = evaluate('grid = Grid([[1, 2, 3], [4, 5, 6], [7, 8, 9]])\ngrid.diags = false\ncount = 0\ngrid.neighbors(1, 1, func(x, y, v) { count += 1 })\nprint(count)');
+    assertArrayEqual(result.output, ['4']);
+});
+
+runner.test('Grid: neighbors 8-directional', () => {
+    const result = evaluate('grid = Grid([[1, 2, 3], [4, 5, 6], [7, 8, 9]])\ngrid.diags = true\ncount = 0\ngrid.neighbors(1, 1, func(x, y, v) { count += 1 })\nprint(count)');
+    assertArrayEqual(result.output, ['8']);
+});
+
+runner.test('Grid: neighbors at corner', () => {
+    const result = evaluate('grid = Grid([[1, 2], [3, 4]])\ngrid.diags = false\ncount = 0\ngrid.neighbors(0, 0, func(x, y, v) { count += 1 })\nprint(count)');
+    assertArrayEqual(result.output, ['2']);
+});
+
+runner.test('Grid: visit all cells', () => {
+    const result = evaluate('grid = Grid([[1, 2], [3, 4]])\ncount = 0\ngrid.visit(func(x, y, v) { count += v })\nprint(count)');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('Grid: find value', () => {
+    const result = evaluate('grid = Grid([[".", "#"], [".", "."]])\npos = grid.find(func(v) { return v == "#" })\nprint(pos[0])\nprint(pos[1])');
+    assertArrayEqual(result.output, ['1', '0']);
+});
+
+runner.test('Grid: find returns null when not found', () => {
+    const result = evaluate('grid = Grid([[".", "."], [".", "."]])\npos = grid.find(func(v) { return v == "#" })\nprint(pos)');
+    assertArrayEqual(result.output, ['null']);
+});
+
+runner.test('Grid: count value', () => {
+    const result = evaluate('grid = Grid([[".", "#", "."], ["#", "#", "."]])\nprint(grid.count("#"))');
+    assertArrayEqual(result.output, ['3']);
+});
+
+runner.test('Grid: property assignment', () => {
+    const result = evaluate('grid = Grid([[1, 2]])\ngrid.cellSize = 30\nprint(grid.cellSize)');
+    assertArrayEqual(result.output, ['30']);
+});
+
+runner.test('Grid: colorMap assignment', () => {
+    const result = evaluate('grid = Grid([[".", "#"]])\ngrid.colorMap = {".": "white", "#": "black"}\nprint(len(grid.colorMap))');
+    assertArrayEqual(result.output, ['2']);
+});
+
+runner.test('Grid: diags property default', () => {
+    const result = evaluate('grid = Grid([[1, 2]])\nprint(grid.diags)');
+    assertArrayEqual(result.output, ['false']);
+});
+
+runner.test('Grid: set diags to true', () => {
+    const result = evaluate('grid = Grid([[1, 2]])\ngrid.diags = true\nprint(grid.diags)');
+    assertArrayEqual(result.output, ['true']);
+});
+
+runner.test('Grid: default cellSize', () => {
+    const result = evaluate('grid = Grid([[1, 2]])\nprint(grid.cellSize)');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('Grid: default colorMap has entries', () => {
+    const result = evaluate('grid = Grid([[".", "#"]])\nprint(grid.colorMap["."] != null)\nprint(grid.colorMap["#"] != null)');
+    assertArrayEqual(result.output, ['true', 'true']);
+});
+
+runner.test('Grid: with input_grid', () => {
+    const code = 'grid = Grid(input_grid())\nprint(grid.width)\nprint(grid.height)\nprint(grid.get(0, 0))';
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, 'abc\ndef', null);
+    interp.run(ast);
+    const output = mockConsole.innerHTML.replace(/<[^>]+>/g, '').trim().split('\n').filter(x => x);
+    assertArrayEqual(output, ['3', '2', 'a']);
+});
+
+runner.test('Grid: multiple assignment with find', () => {
+    const result = evaluate('grid = Grid([[".", "S"], [".", "."]])\nx, y = grid.find(func(v) { return v == "S" })\nprint(x)\nprint(y)');
+    assertArrayEqual(result.output, ['1', '0']);
+});
+
+runner.test('Grid: visit with coordinates', () => {
+    const result = evaluate('grid = Grid([["a", "b"]])\ngrid.visit(func(x, y, v) { print(x, y, v) })');
+    assertArrayEqual(result.output, ['0 0 a', '1 0 b']);
+});
+
+runner.test('Grid: neighbors callback with values', () => {
+    const result = evaluate('grid = Grid([[1, 2], [3, 4]])\nsum = 0\ngrid.neighbors(0, 0, func(x, y, v) { sum += v })\nprint(sum)');
+    assertArrayEqual(result.output, ['5']);
+});
+
+runner.test('README: Grid object examples work', () => {
+    const result = evaluate('grid = Grid([[".", "#"], ["#", "."]])\ngrid.diags = false\nprint(grid.width)\nprint(grid.count("#"))');
+    assertArrayEqual(result.output, ['2', '2']);
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);
