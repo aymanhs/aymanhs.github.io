@@ -243,6 +243,36 @@ class Parser {
     assignment() {
         const expr = this.logicalOr();
         
+        // Check for compound assignment operators
+        const compoundOps = {
+            [TokenType.PLUS_ASSIGN]: '+',
+            [TokenType.MINUS_ASSIGN]: '-',
+            [TokenType.STAR_ASSIGN]: '*',
+            [TokenType.SLASH_ASSIGN]: '/',
+            [TokenType.PERCENT_ASSIGN]: '%'
+        };
+        
+        for (const [tokenType, op] of Object.entries(compoundOps)) {
+            if (this.match(tokenType)) {
+                const loc = this.loc();
+                this.advance();
+                const rightValue = this.assignment();
+                
+                // Convert x += y to x = x + y
+                const binaryOp = { type: 'BinaryOp', left: expr, op, right: rightValue, ...loc };
+                
+                if (expr.type === 'Identifier') {
+                    return { type: 'Assignment', target: expr.name, value: binaryOp, ...loc };
+                } else if (expr.type === 'Index') {
+                    return { type: 'IndexAssignment', object: expr.object, index: expr.index, value: binaryOp, ...loc };
+                } else if (expr.type === 'MemberAccess') {
+                    return { type: 'MemberAssignment', object: expr.object, property: expr.property, value: binaryOp, ...loc };
+                }
+                
+                throw new GridLangError('Invalid assignment target', loc.line, loc.col, 'SyntaxError');
+            }
+        }
+        
         if (this.match(TokenType.ASSIGN)) {
             const loc = this.loc();
             this.advance();

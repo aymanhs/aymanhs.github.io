@@ -22,6 +22,11 @@ const TokenType = {
     PERCENT: 'PERCENT',
     POWER: 'POWER',
     ASSIGN: 'ASSIGN',
+    PLUS_ASSIGN: 'PLUS_ASSIGN',
+    MINUS_ASSIGN: 'MINUS_ASSIGN',
+    STAR_ASSIGN: 'STAR_ASSIGN',
+    SLASH_ASSIGN: 'SLASH_ASSIGN',
+    PERCENT_ASSIGN: 'PERCENT_ASSIGN',
     EQ: 'EQ',
     NE: 'NE',
     LT: 'LT',
@@ -376,6 +381,32 @@ class Lexer {
                 this.advance();
                 this.advance();
                 return new Token(TokenType.POWER, '**', line, col);
+            }
+            // Compound assignment operators
+            if (this.current() === '+' && this.peek() === '=') {
+                this.advance();
+                this.advance();
+                return new Token(TokenType.PLUS_ASSIGN, '+=', line, col);
+            }
+            if (this.current() === '-' && this.peek() === '=') {
+                this.advance();
+                this.advance();
+                return new Token(TokenType.MINUS_ASSIGN, '-=', line, col);
+            }
+            if (this.current() === '*' && this.peek() === '=') {
+                this.advance();
+                this.advance();
+                return new Token(TokenType.STAR_ASSIGN, '*=', line, col);
+            }
+            if (this.current() === '/' && this.peek() === '=') {
+                this.advance();
+                this.advance();
+                return new Token(TokenType.SLASH_ASSIGN, '/=', line, col);
+            }
+            if (this.current() === '%' && this.peek() === '=') {
+                this.advance();
+                this.advance();
+                return new Token(TokenType.PERCENT_ASSIGN, '%=', line, col);
             }
 
             // Single-character operators

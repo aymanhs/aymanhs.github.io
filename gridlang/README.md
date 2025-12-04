@@ -6,6 +6,7 @@ A fast scripting language with built-in 2D grid and 3D voxel rendering capabilit
 
 ✅ **Go-like syntax** - Clean with `func` and braces  
 ✅ **Arithmetic operations** - `+`, `-`, `*`, `/`, `%`, `**`  
+✅ **Compound assignments** - `+=`, `-=`, `*=`, `/=`, `%=`  
 ✅ **Arrays** - Including multi-dimensional: `[[1,2], [3,4]]`  
 ✅ **Maps/Objects** - JS-style: `{x: 10, y: 20}` with dot notation  
 ✅ **Template strings** - Python f-strings: `f"Hello {name}!"`  
@@ -113,6 +114,33 @@ func multiplier(factor) {
 }
 times3 = multiplier(3)
 print(times3(10))  # 30
+```
+
+### Compound Assignment Operators
+```go
+# All standard compound assignment operators are supported
+x = 10
+x += 5   # x = x + 5  → x is now 15
+x -= 3   # x = x - 3  → x is now 12
+x *= 2   # x = x * 2  → x is now 24
+x /= 4   # x = x / 4  → x is now 6
+x %= 4   # x = x % 4  → x is now 2
+
+# Works with array elements
+arr = [10, 20, 30]
+arr[0] += 5   # arr[0] is now 15
+arr[1] *= 2   # arr[1] is now 40
+
+# Works with object properties
+obj = {x: 10, y: 20}
+obj.x += 5    # obj.x is now 15
+obj.y /= 2    # obj.y is now 10
+
+# Can be used in complex expressions
+count = 0
+for i = 0; i < 10; i += 1 {
+    count += i   # Accumulate sum
+}
 ```
 
 ### Control Flow

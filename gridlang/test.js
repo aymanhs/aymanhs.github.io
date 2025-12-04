@@ -1603,6 +1603,183 @@ runner.test('README: Higher-order method examples work', () => {
     assertArrayEqual(result.output, ['20,40']);
 });
 
+// ============= COMPOUND ASSIGNMENT OPERATORS TESTS =============
+runner.test('Lexer: Tokenize += operator', () => {
+    const lexer = new Lexer('x += 5');
+    const tokens = lexer.tokenize();
+    assertEqual(tokens[1].type, TokenType.PLUS_ASSIGN);
+    assertEqual(tokens[1].value, '+=');
+});
+
+runner.test('Lexer: Tokenize -= operator', () => {
+    const lexer = new Lexer('x -= 3');
+    const tokens = lexer.tokenize();
+    assertEqual(tokens[1].type, TokenType.MINUS_ASSIGN);
+});
+
+runner.test('Lexer: Tokenize *= operator', () => {
+    const lexer = new Lexer('x *= 2');
+    const tokens = lexer.tokenize();
+    assertEqual(tokens[1].type, TokenType.STAR_ASSIGN);
+});
+
+runner.test('Lexer: Tokenize /= operator', () => {
+    const lexer = new Lexer('x /= 4');
+    const tokens = lexer.tokenize();
+    assertEqual(tokens[1].type, TokenType.SLASH_ASSIGN);
+});
+
+runner.test('Lexer: Tokenize %= operator', () => {
+    const lexer = new Lexer('x %= 3');
+    const tokens = lexer.tokenize();
+    assertEqual(tokens[1].type, TokenType.PERCENT_ASSIGN);
+});
+
+runner.test('Parser: Parse += assignment', () => {
+    const ast = parse('x += 5');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'BinaryOp');
+    assertEqual(ast[0].expression.value.op, '+');
+});
+
+runner.test('Parser: Parse -= assignment', () => {
+    const ast = parse('x -= 3');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'BinaryOp');
+    assertEqual(ast[0].expression.value.op, '-');
+});
+
+runner.test('Parser: Parse *= assignment', () => {
+    const ast = parse('x *= 2');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'BinaryOp');
+    assertEqual(ast[0].expression.value.op, '*');
+});
+
+runner.test('Parser: Parse /= assignment', () => {
+    const ast = parse('x /= 4');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'BinaryOp');
+    assertEqual(ast[0].expression.value.op, '/');
+});
+
+runner.test('Parser: Parse %= assignment', () => {
+    const ast = parse('x %= 3');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'BinaryOp');
+    assertEqual(ast[0].expression.value.op, '%');
+});
+
+runner.test('Runtime: Variable += operator', () => {
+    const result = evaluate('x = 10\nx += 5\nprint(x)');
+    assertArrayEqual(result.output, ['15']);
+});
+
+runner.test('Runtime: Variable -= operator', () => {
+    const result = evaluate('x = 10\nx -= 3\nprint(x)');
+    assertArrayEqual(result.output, ['7']);
+});
+
+runner.test('Runtime: Variable *= operator', () => {
+    const result = evaluate('x = 10\nx *= 2\nprint(x)');
+    assertArrayEqual(result.output, ['20']);
+});
+
+runner.test('Runtime: Variable /= operator', () => {
+    const result = evaluate('x = 20\nx /= 4\nprint(x)');
+    assertArrayEqual(result.output, ['5']);
+});
+
+runner.test('Runtime: Variable %= operator', () => {
+    const result = evaluate('x = 17\nx %= 5\nprint(x)');
+    assertArrayEqual(result.output, ['2']);
+});
+
+runner.test('Runtime: Array element += operator', () => {
+    const result = evaluate('arr = [1, 2, 3]\narr[0] += 10\nprint(arr[0])');
+    assertArrayEqual(result.output, ['11']);
+});
+
+runner.test('Runtime: Array element -= operator', () => {
+    const result = evaluate('arr = [10, 20, 30]\narr[1] -= 5\nprint(arr[1])');
+    assertArrayEqual(result.output, ['15']);
+});
+
+runner.test('Runtime: Array element *= operator', () => {
+    const result = evaluate('arr = [2, 4, 6]\narr[2] *= 3\nprint(arr[2])');
+    assertArrayEqual(result.output, ['18']);
+});
+
+runner.test('Runtime: Array element /= operator', () => {
+    const result = evaluate('arr = [100, 50, 25]\narr[1] /= 5\nprint(arr[1])');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('Runtime: Array element %= operator', () => {
+    const result = evaluate('arr = [17, 23, 29]\narr[0] %= 5\nprint(arr[0])');
+    assertArrayEqual(result.output, ['2']);
+});
+
+runner.test('Runtime: Object property += operator', () => {
+    const result = evaluate('obj = {x: 10}\nobj.x += 7\nprint(obj.x)');
+    assertArrayEqual(result.output, ['17']);
+});
+
+runner.test('Runtime: Object property -= operator', () => {
+    const result = evaluate('obj = {count: 50}\nobj.count -= 20\nprint(obj.count)');
+    assertArrayEqual(result.output, ['30']);
+});
+
+runner.test('Runtime: Object property *= operator', () => {
+    const result = evaluate('obj = {val: 5}\nobj.val *= 4\nprint(obj.val)');
+    assertArrayEqual(result.output, ['20']);
+});
+
+runner.test('Runtime: Object property /= operator', () => {
+    const result = evaluate('obj = {num: 100}\nobj.num /= 5\nprint(obj.num)');
+    assertArrayEqual(result.output, ['20']);
+});
+
+runner.test('Runtime: Object property %= operator', () => {
+    const result = evaluate('obj = {n: 23}\nobj.n %= 7\nprint(obj.n)');
+    assertArrayEqual(result.output, ['2']);
+});
+
+runner.test('Runtime: Multiple compound assignments', () => {
+    const result = evaluate('x = 10\nx += 5\nx *= 2\nprint(x)');
+    assertArrayEqual(result.output, ['30']);
+});
+
+runner.test('Runtime: Compound with regular ops', () => {
+    const result = evaluate('x = 5\ny = 3\nx += y * 2\nprint(x)');
+    assertArrayEqual(result.output, ['11']);
+});
+
+runner.test('Runtime: Compound with negative', () => {
+    const result = evaluate('x = 10\nx += -5\nprint(x)');
+    assertArrayEqual(result.output, ['5']);
+});
+
+runner.test('Runtime: Compound with floats', () => {
+    const result = evaluate('x = 10.5\nx *= 2\nprint(x)');
+    assertArrayEqual(result.output, ['21']);
+});
+
+runner.test('Runtime: Compound with zero', () => {
+    const result = evaluate('x = 10\nx *= 0\nprint(x)');
+    assertArrayEqual(result.output, ['0']);
+});
+
+runner.test('Runtime: Compound in for loop', () => {
+    const result = evaluate('count = 0\nfor i in range(5) {\n  count += i\n}\nprint(count)');
+    assertArrayEqual(result.output, ['10']);
+});
+
+runner.test('README: Compound assignment examples work', () => {
+    const result = evaluate('x = 10\nx += 5\nx -= 3\nx *= 2\nx /= 4\nx %= 4\nprint(x)');
+    assertArrayEqual(result.output, ['2']);
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);
