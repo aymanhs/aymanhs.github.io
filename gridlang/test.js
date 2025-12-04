@@ -1931,6 +1931,177 @@ runner.test('README: Grid object examples work', () => {
     assertArrayEqual(result.output, ['2', '2']);
 });
 
+// ============= META TESTS =============
+// Tests that verify the development process itself
+
+runner.test('Meta: All builtins have help documentation', () => {
+    // Load ui.js to get builtinFunctions
+    const fs = require('fs');
+    const uiCode = fs.readFileSync('./ui.js', 'utf8');
+    
+    // Extract builtinFunctions object from ui.js
+    const match = uiCode.match(/const builtinFunctions = \{[\s\S]*?\n\};/);
+    if (!match) {
+        throw new Error('Could not find builtinFunctions in ui.js');
+    }
+    
+    // Parse the help entries
+    const helpFunctions = [];
+    const funcMatches = match[0].matchAll(/name:\s*"([^"]+)"/g);
+    for (const m of funcMatches) {
+        // Extract just the function name (before parentheses or space)
+        const funcName = m[1].split('(')[0].split(' ')[0].trim();
+        if (funcName && !funcName.startsWith('func') && !funcName.startsWith('for') && 
+            !funcName.startsWith('return') && !funcName.startsWith('r"') && 
+            !funcName.startsWith('f"') && funcName !== 'if' && funcName !== 'while') {
+            helpFunctions.push(funcName);
+        }
+    }
+    
+    // Get all global builtins from interpreter
+    const code = 'x = 1'; // Minimal code to create interpreter
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, '', null, {});
+    
+    // Get builtin names from globalEnv.vars
+    const builtins = [];
+    for (const [key, value] of Object.entries(interp.globalEnv.vars)) {
+        if (typeof value === 'function') {
+            builtins.push(key);
+        }
+    }
+    
+    // Check for missing documentation
+    const missing = builtins.filter(b => !helpFunctions.includes(b));
+    
+    // Filter out internal/special builtins that don't need docs
+    const whitelist = ['Grid', 'Regex', 'Map']; // Constructors that are documented differently
+    const actuallyMissing = missing.filter(b => !whitelist.includes(b));
+    
+    if (actuallyMissing.length > 0) {
+        throw new Error(`Missing help documentation for: ${actuallyMissing.join(', ')}`);
+    }
+});
+
+runner.test('Meta: All builtins have autocomplete entries', () => {
+    const fs = require('fs');
+    const aceCode = fs.readFileSync('./ace-init.js', 'utf8');
+    
+    // Extract autocomplete entries
+    const autocompleteMatch = aceCode.match(/const builtins = \[[\s\S]*?\];/);
+    if (!autocompleteMatch) {
+        throw new Error('Could not find builtins array in ace-init.js');
+    }
+    
+    const autocompleteNames = [];
+    const nameMatches = autocompleteMatch[0].matchAll(/name:\s*'([^']+)'/g);
+    for (const m of nameMatches) {
+        autocompleteNames.push(m[1]);
+    }
+    
+    // Get all global builtins from interpreter
+    const code = 'x = 1';
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, '', null, {});
+    
+    const builtins = [];
+    for (const [key, value] of Object.entries(interp.globalEnv.vars)) {
+        if (typeof value === 'function') {
+            builtins.push(key);
+        }
+    }
+    
+    // Check for missing autocomplete entries
+    const missing = builtins.filter(b => !autocompleteNames.includes(b));
+    const whitelist = ['Grid', 'Regex', 'Map'];
+    const actuallyMissing = missing.filter(b => !whitelist.includes(b));
+    
+    if (actuallyMissing.length > 0) {
+        throw new Error(`Missing autocomplete entries for: ${actuallyMissing.join(', ')}`);
+    }
+});
+
+runner.test('Meta: All builtins have Ace syntax highlighting', () => {
+    const fs = require('fs');
+    const aceMode = fs.readFileSync('./gridlang-ace-mode.js', 'utf8');
+    
+    // Extract syntax highlighting function names
+    const syntaxMatch = aceMode.match(/token:\s*'support\.function',\s*regex:\s*'([^']+)'/);
+    if (!syntaxMatch) {
+        throw new Error('Could not find support.function regex in gridlang-ace-mode.js');
+    }
+    
+    const regexPattern = syntaxMatch[1];
+    // Extract function names from the regex pattern
+    // Pattern is: \b(func1|func2|func3)\b
+    const innerPattern = regexPattern.match(/\(([^)]+)\)/);
+    if (!innerPattern) {
+        throw new Error('Could not parse function names from regex');
+    }
+    
+    const syntaxFunctions = innerPattern[1].split('|');
+    
+    // Get all global builtins from interpreter
+    const code = 'x = 1';
+    const lexer = new Lexer(code);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
+    const interp = new Interpreter(null, null, mockConsole, null, '', null, {});
+    
+    const builtins = [];
+    for (const [key, value] of Object.entries(interp.globalEnv.vars)) {
+        if (typeof value === 'function') {
+            builtins.push(key);
+        }
+    }
+    
+    // Check for missing syntax highlighting
+    const missing = builtins.filter(b => !syntaxFunctions.includes(b));
+    const whitelist = ['Grid', 'Regex', 'Map'];
+    const actuallyMissing = missing.filter(b => !whitelist.includes(b));
+    
+    if (actuallyMissing.length > 0) {
+        throw new Error(`Missing Ace syntax highlighting for: ${actuallyMissing.join(', ')}`);
+    }
+});
+
+runner.test('Meta: version.js has been updated', () => {
+    const { execSync } = require('child_process');
+    
+    try {
+        // Check if there are changes to core files
+        const changedFiles = execSync('git diff --name-only HEAD 2>/dev/null || echo ""', { encoding: 'utf8' });
+        const hasCoreChanges = changedFiles.split('\n').some(f => 
+            f.includes('gridlang.js') || f.includes('parser.js') || f.includes('lexer.js')
+        );
+        
+        if (hasCoreChanges) {
+            // Check if version.js was also changed
+            const versionChanged = changedFiles.includes('version.js');
+            if (!versionChanged) {
+                throw new Error('Core files changed but version.js was not updated! Run: Update version in version.js');
+            }
+        }
+    } catch (e) {
+        // If not a git repo or git not available, skip this check
+        if (!e.message.includes('version.js')) {
+            // Silently pass if it's just a git availability issue
+            return;
+        }
+        throw e;
+    }
+});
+
 // Run all tests
 const success = runner.run();
 process.exit(success ? 0 : 1);

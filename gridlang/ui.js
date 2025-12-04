@@ -298,8 +298,11 @@ const builtinFunctions = {
         { name: "floor(x)", desc: "Round down to integer." },
         { name: "ceil(x)", desc: "Round up to integer." },
         { name: "round(x)", desc: "Round to nearest integer." },
-        { name: "sin(x), cos(x), tan(x)", desc: "Trigonometric functions (radians)." },
-        { name: "min(...args), max(...args)", desc: "Find minimum or maximum value." },
+        { name: "sin(x)", desc: "Sine function (radians)." },
+        { name: "cos(x)", desc: "Cosine function (radians)." },
+        { name: "tan(x)", desc: "Tangent function (radians)." },
+        { name: "min(...args)", desc: "Find minimum value from arguments." },
+        { name: "max(...args)", desc: "Find maximum value from arguments." },
         { name: "random()", desc: "Random number between 0 and 1." },
     ],
     "Timing & Animation": [
@@ -334,6 +337,8 @@ const builtinFunctions = {
         { name: "remove_voxel(x, y, z)", desc: "Remove voxel at coordinates." },
         { name: "get_voxel(x, y, z)", desc: "Get color of voxel at coordinates, or null if empty." },
         { name: "clear_3d()", desc: "Remove all voxels from scene." },
+        { name: "begin_3d_batch()", desc: "Start batching 3D updates for better performance. Call end_3d_batch() when done." },
+        { name: "end_3d_batch()", desc: "End batching and render all 3D updates at once." },
     ],
     "Input Data": [
         { name: "input_string(filename=null)", desc: "Get raw input data as string. If filename is provided, reads from that named input, otherwise reads from active input." },
