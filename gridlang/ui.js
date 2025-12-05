@@ -220,7 +220,7 @@ const builtinFunctions = {
         { name: "arr.slice(start, end)", desc: "Extract subarray from start to end (returns new array)." },
         { name: "arr.concat(other)", desc: "Combine two arrays (returns new array)." },
         { name: "arr.reverse()", desc: "Reverse array order (returns new array)." },
-        { name: "arr.sort()", desc: "Sort array (numbers or strings, returns new array)." },
+        { name: "arr.sort(compareFn=null)", desc: "Sort array. Default: numbers numerically, strings alphabetically. With compareFn: custom sort where fn(a,b) returns negative if a<b, 0 if equal, positive if a>b. Returns new array." },
         { name: "arr.join(separator)", desc: "Join elements into string with separator." },
         { name: "arr.indexOf(value)", desc: "Find first index of value. Returns -1 if not found." },
         { name: "arr.contains(value)", desc: "Check if array contains value." },

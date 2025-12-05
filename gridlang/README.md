@@ -482,6 +482,20 @@ arr.concat([4, 5])                    # [1, 2, 3, 4, 5] - arr unchanged
 arr.reverse()                         # [3, 2, 1] - arr unchanged
 [3, 1, 2].sort()                      # [1, 2, 3] - sorts numbers correctly!
 
+# Custom sort with comparator function
+[3, 1, 2, 5, 4].sort(func(a, b) { return b - a })  # [5, 4, 3, 2, 1] - descending
+
+# Sort objects by property
+people = [{name: "Bob", age: 30}, {name: "Alice", age: 25}]
+people.sort(func(a, b) { return a.age - b.age })  # Sort by age ascending
+
+# Multi-field sort
+data.sort(func(a, b) {
+    if a.priority != b.priority { return b.priority - a.priority }
+    if a.name < b.name { return -1 }
+    return 1
+})
+
 # Array searching
 arr.indexOf(2)                        # 1
 arr.contains(2)                       # true

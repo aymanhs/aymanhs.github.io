@@ -1360,10 +1360,21 @@ class Interpreter {
                         case 'reverse':
                             return () => [...obj].reverse();
                         case 'sort':
-                            return () => [...obj].sort((a, b) => {
-                                if (typeof a === 'number' && typeof b === 'number') return a - b;
-                                return String(a).localeCompare(String(b));
-                            });
+                            return (compareFn) => {
+                                if (compareFn === undefined) {
+                                    // Default sort - numbers numerically, everything else lexically
+                                    return [...obj].sort((a, b) => {
+                                        if (typeof a === 'number' && typeof b === 'number') return a - b;
+                                        return String(a).localeCompare(String(b));
+                                    });
+                                } else {
+                                    // Custom comparator function
+                                    if (typeof compareFn !== 'function') {
+                                        throw new Error('sort() comparator must be a function');
+                                    }
+                                    return [...obj].sort((a, b) => compareFn(a, b));
+                                }
+                            };
                         case 'join':
                             return (sep) => obj.join(String(sep));
                         case 'indexOf':

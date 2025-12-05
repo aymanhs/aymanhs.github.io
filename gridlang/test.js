@@ -1353,6 +1353,26 @@ runner.test('Array: sort() method', () => {
     assertArrayEqual(result.output, ['1', '3']);
 });
 
+runner.test('Array: sort() with comparator - descending', () => {
+    const result = evaluate('arr = [3, 1, 2, 5, 4]\nsorted = arr.sort(func(a, b) { return b - a })\nprint(sorted.join(","))');
+    assertArrayEqual(result.output, ['5,4,3,2,1']);
+});
+
+runner.test('Array: sort() objects by property', () => {
+    const result = evaluate('arr = [{age: 30}, {age: 20}, {age: 25}]\nsorted = arr.sort(func(a, b) { return a.age - b.age })\nprint(sorted[0].age)\nprint(sorted[2].age)');
+    assertArrayEqual(result.output, ['20', '30']);
+});
+
+runner.test('Array: sort() with string comparator', () => {
+    const result = evaluate('arr = ["charlie", "alice", "bob"]\nsorted = arr.sort(func(a, b) { if a < b { return -1 } elsif a > b { return 1 } else { return 0 } })\nprint(sorted.join(","))');
+    assertArrayEqual(result.output, ['alice,bob,charlie']);
+});
+
+runner.test('Array: sort() multi-field comparator', () => {
+    const result = evaluate('arr = [{p: 1, n: "b"}, {p: 2, n: "a"}, {p: 1, n: "a"}]\nsorted = arr.sort(func(a, b) { if a.p != b.p { return a.p - b.p } if a.n < b.n { return -1 } return 1 })\nprint(sorted[0].n)\nprint(sorted[1].n)');
+    assertArrayEqual(result.output, ['a', 'b']);
+});
+
 runner.test('Array: join() method', () => {
     const result = evaluate('arr = ["a", "b", "c"]\nprint(arr.join("-"))');
     assertArrayEqual(result.output, ['a-b-c']);
