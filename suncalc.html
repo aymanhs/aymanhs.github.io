@@ -62,12 +62,15 @@
     <div id="canvas-container" class="relative">
         <div class="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-auto z-10 max-w-[calc(100vw-5rem)]">
             <h1 class="text-lg md:text-2xl font-bold text-white drop-shadow-md">Sun Tracker</h1>
-            <p id="location-status" class="text-xs md:text-sm text-emerald-400 font-medium flex items-center gap-1 md:gap-2">
+            <p id="location-status"
+                class="text-xs md:text-sm text-emerald-400 font-medium flex items-center gap-1 md:gap-2">
                 <span class="animate-pulse">●</span> Locating...
             </p>
-            <select id="city-selector" class="mt-1 md:mt-2 px-2 md:px-3 py-1 bg-slate-800/90 text-white text-xs rounded border border-slate-600 hover:border-slate-500 cursor-pointer focus:outline-none focus:border-emerald-400 w-full md:w-auto">
+            <select id="city-selector"
+                class="mt-1 md:mt-2 px-2 md:px-3 py-1 bg-slate-800/90 text-white text-xs rounded border border-slate-600 hover:border-slate-500 cursor-pointer focus:outline-none focus:border-emerald-400 w-full md:w-auto">
                 <option value="browser">📍 Use Browser Location</option>
                 <option value="26.0667,50.5577">🇧🇭 Bahrain</option>
+                <option value="78.2232,15.6267">🇸🇯 Longyearbyen (North)</option>
                 <option value="51.5074,-0.1278">🇬🇧 London</option>
                 <option value="40.7128,-74.0060">🇺🇸 New York City</option>
                 <option value="34.0522,-118.2437">🇺🇸 Los Angeles</option>
@@ -82,9 +85,12 @@
                 <option value="1.3521,103.8198">🇸🇬 Singapore</option>
                 <option value="-23.5505,-46.6333">🇧🇷 São Paulo</option>
                 <option value="52.5200,13.4050">🇩🇪 Berlin</option>
+                <option value="-54.8019,-68.3030">🇦🇷 Ushuaia (South)</option>
             </select>
         </div>
-        <div id="north-indicator" class="absolute top-2 right-2 md:top-4 md:right-4 text-right cursor-pointer hover:opacity-80 transition-opacity" title="Click for top view">
+        <div id="north-indicator"
+            class="absolute top-2 right-2 md:top-4 md:right-4 text-right cursor-pointer hover:opacity-80 transition-opacity"
+            title="Click for top view">
             <div class="text-xs text-slate-400 uppercase tracking-wider">North</div>
             <div
                 class="w-8 h-8 border-2 border-slate-600 rounded-full flex items-center justify-center bg-slate-800/50">
@@ -100,12 +106,12 @@
     <!-- Controls & Data Panel -->
     <div class="glass-panel fixed bottom-0 left-0 w-full h-[40vh] flex flex-col p-4 md:p-6 overflow-y-auto">
 
-        <!-- Time Slider Control -->
+        <!-- Time Speed Slider Control -->
         <div class="w-full max-w-3xl mx-auto mb-6">
             <div class="flex justify-between items-end mb-2">
                 <div>
-                    <div class="text-xs text-slate-400 uppercase tracking-widest">Selected Time</div>
-                    <div id="display-time" class="text-3xl font-bold text-white font-mono">--:--</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-widest">Simulation Time</div>
+                    <div id="display-time" class="text-xl md:text-3xl font-bold text-white font-mono">--</div>
                 </div>
                 <div class="flex gap-2">
                     <button id="reset-btn"
@@ -114,21 +120,21 @@
                     </button>
                 </div>
             </div>
-            <input type="range" id="time-slider" min="0" max="1439" value="720" class="w-full">
+            <input type="range" id="time-slider" min="-10" max="10" value="0" step="1" class="w-full">
             <div class="flex justify-between text-xs text-slate-500 mt-1">
-                <span>00:00</span>
-                <span>12:00</span>
-                <span>23:59</span>
+                <span>
+                    << Rewind</span>
+                        <span>Stop</span>
+                        <span>Forward >></span>
             </div>
         </div>
 
-        <!-- Day of Year Slider -->
+        <!-- Date Speed Slider Control -->
         <div class="w-full max-w-3xl mx-auto mb-6">
             <div class="flex justify-between items-end mb-2">
                 <div class="flex justify-between items-end w-full">
                     <div>
-                        <div class="text-xs text-slate-400 uppercase tracking-widest">Date</div>
-                        <div id="display-date" class="text-xl font-bold text-white font-mono">--/--</div>
+                        <div class="text-xs text-slate-400 uppercase tracking-widest">Date Speed</div>
                     </div>
                     <button id="today-btn"
                         class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition-colors">
@@ -136,11 +142,12 @@
                     </button>
                 </div>
             </div>
-            <input type="range" id="date-slider" min="1" max="365" value="1" class="w-full">
+            <input type="range" id="date-slider" min="-10" max="10" value="0" step="1" class="w-full">
             <div class="flex justify-between text-xs text-slate-500 mt-1">
-                <span>Jan 1</span>
-                <span class="hidden sm:inline">Jul 1</span>
-                <span>Dec 31</span>
+                <span>
+                    << Prev Year</span>
+                        <span>Stop</span>
+                        <span>Next Year >></span>
             </div>
         </div>
 
@@ -218,6 +225,12 @@
         let moonPathLine = null;
         let sunGlow = null;
 
+        // Speed Control State
+        let timeSpeed = 0;
+        let dateSpeed = 0;
+        let lastFrameTime = 0;
+        let dateAccumulator = 0;
+
         // Config
         const SUN_ORBIT_RADIUS = 25; // Reduced from 50 to bring sun closer
 
@@ -229,7 +242,6 @@
         const resetBtn = document.getElementById('reset-btn');
         const northIndicator = document.getElementById('north-indicator');
         const dateSlider = document.getElementById('date-slider');
-        const displayDateEl = document.getElementById('display-date');
         const todayBtn = document.getElementById('today-btn');
 
         // Data Elements
@@ -349,12 +361,12 @@
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                
+
                 const delta = lastTouchDistance - distance;
                 cameraRadius += delta * 0.1;
                 // Clamp zoom - allow zooming out much further (up to 200)
                 cameraRadius = Math.max(10, Math.min(200, cameraRadius));
-                
+
                 lastTouchDistance = distance;
                 updateCameraPosition();
             }
@@ -567,19 +579,36 @@
             const noonTime = SunCalc.getTimes(date, userLat, userLon).solarNoon;
             const noonPos = SunCalc.getPosition(noonTime, userLat, userLon);
 
-            // Calculate declination from noon altitude
-            const declination = noonPos.altitude - (Math.PI / 2 - latitudeInRad);
+            // Robust Declination Calculation using Vector Dot Product
+            // Pole Axis (North Celestial Pole)
+            const poleAxis = new THREE.Vector3(0, Math.sin(latitudeInRad), -Math.cos(latitudeInRad));
+
+            // Sun Vector at Noon
+            // Note: getSunPositionVector returns {x,y,z}, we need THREE.Vector3
+            const sv = getSunPositionVector(noonPos.azimuth, noonPos.altitude, 1.0);
+            const sunVector = new THREE.Vector3(sv.x, sv.y, sv.z);
+
+            // Declination is the angle between Sun and Celestial Equator.
+            // Angle from Pole = acos( dot(Sun, Pole) )
+            // Declination = 90 - Angle from Pole
+            // sin(Dec) = cos(90-Dec) = dot(Sun, Pole)
+            const sinDec = sunVector.dot(poleAxis);
+            const declination = Math.asin(sinDec);
 
             // Calculate path circle radius and center
             const pathRadius = SUN_ORBIT_RADIUS * Math.cos(declination);
             const centerDist = SUN_ORBIT_RADIUS * Math.sin(declination);
 
-            // Pole axis is tilted from Y-axis towards North (-Z)
-            const poleAxis = new THREE.Vector3(0, Math.sin(latitudeInRad), -Math.cos(latitudeInRad));
-            const centerPos = poleAxis.multiplyScalar(centerDist);
+            // Center position along the pole axis
+            const centerPos = poleAxis.clone().multiplyScalar(centerDist);
 
-            const startPoint = new THREE.Vector3(-pathRadius, 0, 0).add(centerPos);
-            const endPoint = new THREE.Vector3(pathRadius, 0, 0).add(centerPos);
+            // The circle is perpendicular to the pole axis.
+            // We need a vector perpendicular to the pole axis to define the start/end points.
+            // Since poleAxis is in YZ plane, the X axis (1,0,0) is always perpendicular to it.
+            const right = new THREE.Vector3(1, 0, 0);
+
+            const startPoint = right.clone().multiplyScalar(-pathRadius).add(centerPos);
+            const endPoint = right.clone().multiplyScalar(pathRadius).add(centerPos);
 
             seasonLine.geometry.setFromPoints([startPoint, endPoint]);
         }
@@ -710,7 +739,10 @@
                 scene.background = new THREE.Color('#38bdf8');
             }
 
-            displayTimeEl.innerText = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Update consolidated display
+            const dateStr = date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            displayTimeEl.innerText = `${dateStr} • ${timeStr}`;
         }
 
         function updateSolarTimes(date) {
@@ -719,7 +751,7 @@
             const times = SunCalc.getTimes(date, userLat, userLon);
             const formatTime = (d) => {
                 if (!d || d.toString() === 'Invalid Date') return '--:--';
-                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
             };
 
             elFajr.innerText = formatTime(times.nightEnd);
@@ -742,22 +774,11 @@
             updateSeasonLine(now);
             updateMoonPath(now);
             updateMoonPosition(now);
-            const totalMinutes = now.getHours() * 60 + now.getMinutes();
-            timeSlider.value = totalMinutes;
         }
 
         function init() {
-            // Init Date Slider
-            const year = currentDate.getFullYear();
-            const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-            dateSlider.max = isLeap ? 366 : 365;
-
-            const start = new Date(year, 0, 0);
-            const diff = currentDate - start;
-            const oneDay = 1000 * 60 * 60 * 24;
-            const dayOfYear = Math.floor(diff / oneDay);
-            dateSlider.value = dayOfYear;
-            displayDateEl.innerText = currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            // Init Date Display
+            // displayDateEl removed
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -774,8 +795,7 @@
                         updateMoonPath(now);
                         updateMoonPosition(now);
 
-                        const totalMinutes = now.getHours() * 60 + now.getMinutes();
-                        timeSlider.value = totalMinutes;
+                        updateMoonPosition(now);
                     },
                     (error) => {
                         let msg = "Location denied.";
@@ -794,9 +814,9 @@
         function setTimeTo(date) {
             if (!date || date.toString() === 'Invalid Date') return;
 
-            isManualMode = true;
-            const totalMinutes = date.getHours() * 60 + date.getMinutes();
-            timeSlider.value = totalMinutes;
+            isManualMode = true; // Still useful to stop auto-sync with real time if we were doing that
+            // But now we are mostly in manual mode anyway since we control speed
+
 
             currentDate = date;
             updateSunPosition(date);
@@ -825,7 +845,7 @@
 
         citySelector.addEventListener('change', (e) => {
             const value = e.target.value;
-            
+
             if (value === 'browser') {
                 // Use browser location
                 if ("geolocation" in navigator) {
@@ -835,7 +855,7 @@
                             userLat = position.coords.latitude;
                             userLon = position.coords.longitude;
                             locationStatus.innerHTML = `<span class="text-emerald-400">●</span> ${userLat.toFixed(2)}, ${userLon.toFixed(2)}`;
-                            
+
                             updateSolarTimes(currentDate);
                             updateSunPosition(currentDate);
                             updateSunPath(currentDate);
@@ -856,10 +876,10 @@
                 const [lat, lon] = value.split(',').map(parseFloat);
                 userLat = lat;
                 userLon = lon;
-                
+
                 const cityName = e.target.options[e.target.selectedIndex].text.split(' ').slice(1).join(' ');
                 locationStatus.innerHTML = `<span class="text-emerald-400">●</span> ${cityName}`;
-                
+
                 updateSolarTimes(currentDate);
                 updateSunPosition(currentDate);
                 updateSunPath(currentDate);
@@ -871,16 +891,27 @@
 
         dateSlider.addEventListener('input', (e) => {
             isManualMode = true;
+            dateSpeed = parseInt(e.target.value);
 
-            const dayOfYear = parseInt(e.target.value);
-            const newDate = new Date(new Date().getFullYear(), 0, dayOfYear);
+            resetBtn.classList.remove('bg-slate-600');
+            resetBtn.classList.add('bg-indigo-600');
+            resetBtn.innerText = "RESET TO NOW";
+        });
 
-            const minutes = parseInt(timeSlider.value);
-            const hours = Math.floor(minutes / 60);
-            const mins = minutes % 60;
-            newDate.setHours(hours, mins);
+        // Spring-back for Date Slider
+        function resetDateSlider() {
+            dateSlider.value = 0;
+            dateSpeed = 0;
+        }
+        dateSlider.addEventListener('change', resetDateSlider);
+        dateSlider.addEventListener('mouseup', resetDateSlider);
+        dateSlider.addEventListener('touchend', resetDateSlider);
 
-            currentDate = newDate;
+
+        todayBtn.addEventListener('click', () => {
+            const now = new Date();
+            // Keep current time, just change date
+            currentDate.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
 
             updateSunPosition(currentDate);
             updateSolarTimes(currentDate);
@@ -888,60 +919,34 @@
             updateSeasonLine(currentDate);
             updateMoonPath(currentDate);
             updateMoonPosition(currentDate);
-            displayDateEl.innerText = currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
-
-            resetBtn.classList.remove('bg-slate-600');
-            resetBtn.classList.add('bg-indigo-600');
-            resetBtn.innerText = "RESET TO NOW";
-        });
-
-        todayBtn.addEventListener('click', () => {
-            const now = new Date();
-            const start = new Date(now.getFullYear(), 0, 0);
-            const diff = now - start;
-            const oneDay = 1000 * 60 * 60 * 24;
-            const dayOfYear = Math.floor(diff / oneDay);
-
-            dateSlider.value = dayOfYear;
-            dateSlider.dispatchEvent(new Event('input'));
+            // displayDateEl.innerText = currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
         });
 
         timeSlider.addEventListener('input', (e) => {
             isManualMode = true;
-            const minutes = parseInt(e.target.value);
-            const hours = Math.floor(minutes / 60);
-            const mins = minutes % 60;
-
-            const simDate = new Date(currentDate); // Use date from date slider
-            simDate.setHours(hours, mins);
-
-            currentDate = simDate;
-            updateSunPosition(simDate);
-            updateMoonPosition(simDate);
+            timeSpeed = parseInt(e.target.value);
 
             resetBtn.classList.remove('bg-slate-600');
             resetBtn.classList.add('bg-indigo-600');
             resetBtn.innerText = "RESET TO NOW";
         });
 
+        // Spring-back for Time Slider
+        function resetTimeSlider() {
+            timeSlider.value = 0;
+            timeSpeed = 0;
+        }
+        timeSlider.addEventListener('change', resetTimeSlider);
+        timeSlider.addEventListener('mouseup', resetTimeSlider);
+        timeSlider.addEventListener('touchend', resetTimeSlider);
+
+
         resetBtn.addEventListener('click', () => {
             isManualMode = false;
             const now = new Date();
-
-            // Update date slider to today
-            const start = new Date(now.getFullYear(), 0, 0);
-            const diff = now - start;
-            const oneDay = 1000 * 60 * 60 * 24;
-            const dayOfYear = Math.floor(diff / oneDay);
-            dateSlider.value = dayOfYear;
-            displayDateEl.innerText = now.toLocaleDateString([], { month: 'short', day: 'numeric' });
-
-            // Update time slider to now
-            const totalMinutes = now.getHours() * 60 + now.getMinutes();
-            timeSlider.value = totalMinutes;
+            currentDate = now;
 
             // Update everything
-            currentDate = now;
             updateSunPosition(now);
             updateSolarTimes(now);
             updateSunPath(now);
@@ -949,6 +954,7 @@
             updateMoonPath(now);
             updateMoonPosition(now);
 
+            // displayDateEl.innerText = now.toLocaleDateString([], { month: 'short', day: 'numeric' });
             resetBtn.innerText = "LIVE";
         });
 
@@ -961,19 +967,105 @@
         });
 
         // --- Animation Loop ---
-        function animate() {
+        function animate(time) {
             requestAnimationFrame(animate);
 
-            if (!isManualMode) {
-                const now = new Date();
-                if (now.getMinutes() !== currentDate.getMinutes()) {
-                    currentDate = now;
-                    const totalMinutes = now.getHours() * 60 + now.getMinutes();
-                    if (!isDragging && !isManualMode) {
-                        timeSlider.value = totalMinutes;
-                    }
-                    updateSunPosition(now);
+            // Calculate delta time in seconds
+            const nowTime = time * 0.001;
+            const deltaTime = Math.min(nowTime - lastFrameTime, 0.1); // Cap at 0.1s to prevent huge jumps
+            lastFrameTime = nowTime;
+
+            let needsUpdate = false;
+            let dateChanged = false;
+
+            // Apply Time Speed
+            if (timeSpeed !== 0) {
+                // Exponential speed curve: 
+                // 1-3: slow (minutes)
+                // 4-7: medium (hours)
+                // 8-10: fast (days)
+                const sign = Math.sign(timeSpeed);
+                const mag = Math.abs(timeSpeed);
+
+                // Base speed in minutes per second
+                let speedMinutesPerSec = 0;
+                if (mag <= 3) speedMinutesPerSec = mag * 10; // 10, 20, 30 mins/sec
+                else if (mag <= 7) speedMinutesPerSec = mag * 60; // 4-7 hours/sec equivalent
+                else speedMinutesPerSec = mag * 60 * 10; // Very fast
+
+                const minutesToAdd = speedMinutesPerSec * deltaTime * sign;
+                // Use setTime for smooth float updates
+                const msToAdd = minutesToAdd * 60 * 1000;
+                currentDate.setTime(currentDate.getTime() + msToAdd);
+                needsUpdate = true;
+            }
+
+            // Apply Date Speed
+            if (dateSpeed !== 0) {
+                const sign = Math.sign(dateSpeed);
+                const mag = Math.abs(dateSpeed);
+
+                // Days per second
+                let speedDaysPerSec = 0;
+                if (mag <= 3) speedDaysPerSec = mag * 2; // 2, 4, 6 days/sec
+                else if (mag <= 7) speedDaysPerSec = mag * 10; // Faster
+                else speedDaysPerSec = mag * 60; // Very fast (months/sec)
+
+                // Accumulate fractional days
+                dateAccumulator += speedDaysPerSec * deltaTime * sign;
+
+                // Only apply integer days
+                const daysToApply = Math.trunc(dateAccumulator);
+
+                if (daysToApply !== 0) {
+                    // Preserve time of day
+                    const h = currentDate.getHours();
+                    const m = currentDate.getMinutes();
+
+                    currentDate.setDate(currentDate.getDate() + daysToApply);
+
+                    // Restore time (handles DST shifts or other anomalies)
+                    currentDate.setHours(h, m);
+
+                    // Reduce accumulator by the amount we applied
+                    dateAccumulator -= daysToApply;
+
+                    needsUpdate = true;
+                    dateChanged = true;
                 }
+            }
+
+            // Live Mode (if no interaction)
+            if (!isManualMode && timeSpeed === 0 && dateSpeed === 0) {
+                const now = new Date();
+                if (Math.abs(now - currentDate) > 1000) { // Sync if off by > 1s
+                    currentDate = now;
+                    needsUpdate = true;
+                }
+            }
+
+            if (needsUpdate) {
+                updateSunPosition(currentDate);
+                updateMoonPosition(currentDate);
+                // displayDateEl.innerText = currentDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+                // Only update expensive paths if date changed significantly (e.g. by more than a day total diff from last path update)
+                // For now, let's just update them if dateSpeed is active or if day changed
+                if (dateChanged || Math.abs(dateSpeed) > 0) {
+                    // Throttle path updates? 
+                    // Actually, updating geometry every frame is heavy. 
+                    // Let's only update if the day integer has changed.
+                    // We can store lastPathDate.
+                }
+            }
+
+            // Optimization: Check if day changed for path updates
+            if (!window.lastPathDate || currentDate.getDate() !== window.lastPathDate.getDate() || currentDate.getMonth() !== window.lastPathDate.getMonth()) {
+                updateSunPath(currentDate);
+                updateSeasonLine(currentDate);
+                updateMoonPath(currentDate);
+                updateSolarTimes(currentDate);
+                window.lastPathDate = new Date(currentDate);
             }
 
             renderer.render(scene, camera);
