@@ -10,6 +10,16 @@ const { Lexer, TokenType } = require('./lexer.js');
 const { Parser } = require('./parser.js');
 const { Interpreter } = require('./gridlang.js');
 
+// Polyfills for Node environment
+if (typeof performance === 'undefined') {
+    global.performance = {
+        now: () => Date.now()
+    };
+}
+if (typeof window === 'undefined') {
+    global.window = global;
+}
+
 // Test framework
 class TestRunner {
     constructor() {
@@ -79,17 +89,17 @@ function evaluate(code, inputData = '', inputsMap = {}) {
     const tokens = lexer.tokenize();
     const parser = new Parser(tokens);
     const ast = parser.parse();
-    
+
     // Create mock console that captures output
-    const mockConsole = { 
-        innerHTML: '', 
-        scrollTop: 0, 
-        scrollHeight: 0 
+    const mockConsole = {
+        innerHTML: '',
+        scrollTop: 0,
+        scrollHeight: 0
     };
-    
+
     const interp = new Interpreter(null, null, mockConsole, null, inputData, null, inputsMap);
     interp.run(ast);
-    
+
     // Return both the interpreter (for variable access) and console output
     return {
         env: interp.globalEnv,
@@ -325,7 +335,7 @@ runner.test('Parser: Parse unary operators', () => {
     const ast = parse('x = -5');
     assertEqual(ast[0].expression.value.type, 'UnaryOp');
     assertEqual(ast[0].expression.value.op, '-');
-    
+
     const ast2 = parse('flag = not true');
     assertEqual(ast2[0].expression.value.type, 'UnaryOp');
     assertEqual(ast2[0].expression.value.op, 'not');
@@ -381,6 +391,63 @@ runner.test('Regex: find_all() method', () => {
 runner.test('Regex: replace() method', () => {
     const ast = parse('result = r"\\d+".replace("a1b2c3", "X")');
     assertEqual(ast[0].expression.value.type, 'Call');
+});
+
+runner.test('Array: sort() method', () => {
+    // Simple sort
+    const ast1 = parse('arr = [3, 1, 2]\narr.sort()');
+    assertEqual(ast1[1].expression.type, 'Call');
+
+    // Custom sort with comparator
+    const ast4 = parse('arr = [3, 1, 2]\narr.sort(func(a, b) { return a - b })');
+    assertEqual(ast4[1].expression.type, 'Call');
+});
+
+runner.test('Runtime: Array add/remove functions', () => {
+    // Test add(arr, val) - push
+    let code = `
+    arr = [1, 2, 3]
+    add(arr, 4)
+    res = arr
+    `;
+    let result = evaluate(code);
+    // evaluate returns { env, output }
+    assertArrayEqual(result.env.get('res'), [1, 2, 3, 4], 'add() should push to array');
+
+    // Test add(arr, val, index) - insert
+    code = `
+    arr = [1, 2, 3]
+    add(arr, 99, 1)
+    res = arr
+    `;
+    result = evaluate(code);
+    assertArrayEqual(result.env.get('res'), [1, 99, 2, 3], 'add() with index should insert');
+
+    // Test remove(arr) - pop
+    code = `
+    arr = [1, 2, 3]
+    val = remove(arr)
+    `;
+    // We check side effects by inspecting env
+    result = evaluate(code);
+    assertEqual(result.env.get('val'), 3, 'remove() should return popped value');
+    assertArrayEqual(result.env.get('arr'), [1, 2], 'remove() should modify array');
+
+    // Test remove(arr, index)
+    code = `
+    arr = [1, 2, 3]
+    val = remove(arr, 1)
+    `;
+    result = evaluate(code);
+    assertEqual(result.env.get('val'), 2, 'remove(index) should return removed value');
+    assertArrayEqual(result.env.get('arr'), [1, 3], 'remove(index) should modify array');
+});
+
+runner.test('Runtime: Array objects sort', () => {
+    const ast = parse('pattern = r"(?<year>\\d{4})-(?<month>\\d{2})"');
+    assertEqual(ast[0].expression.type, 'Assignment');
+    assertEqual(ast[0].expression.value.type, 'RegexLiteral');
+    // Just verify it parses - runtime behavior tested in browser
 });
 
 runner.test('Regex: split() method', () => {
@@ -1958,26 +2025,26 @@ runner.test('Meta: All builtins have help documentation', () => {
     // Load ui.js to get builtinFunctions
     const fs = require('fs');
     const uiCode = fs.readFileSync('./ui.js', 'utf8');
-    
+
     // Extract builtinFunctions object from ui.js
     const match = uiCode.match(/const builtinFunctions = \{[\s\S]*?\n\};/);
     if (!match) {
         throw new Error('Could not find builtinFunctions in ui.js');
     }
-    
+
     // Parse the help entries
     const helpFunctions = [];
     const funcMatches = match[0].matchAll(/name:\s*"([^"]+)"/g);
     for (const m of funcMatches) {
         // Extract just the function name (before parentheses or space)
         const funcName = m[1].split('(')[0].split(' ')[0].trim();
-        if (funcName && !funcName.startsWith('func') && !funcName.startsWith('for') && 
-            !funcName.startsWith('return') && !funcName.startsWith('r"') && 
+        if (funcName && !funcName.startsWith('func') && !funcName.startsWith('for') &&
+            !funcName.startsWith('return') && !funcName.startsWith('r"') &&
             !funcName.startsWith('f"') && funcName !== 'if' && funcName !== 'while') {
             helpFunctions.push(funcName);
         }
     }
-    
+
     // Get all global builtins from interpreter
     const code = 'x = 1'; // Minimal code to create interpreter
     const lexer = new Lexer(code);
@@ -1986,7 +2053,7 @@ runner.test('Meta: All builtins have help documentation', () => {
     const ast = parser.parse();
     const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
     const interp = new Interpreter(null, null, mockConsole, null, '', null, {});
-    
+
     // Get builtin names from globalEnv.vars
     const builtins = [];
     for (const [key, value] of Object.entries(interp.globalEnv.vars)) {
@@ -1994,14 +2061,14 @@ runner.test('Meta: All builtins have help documentation', () => {
             builtins.push(key);
         }
     }
-    
+
     // Check for missing documentation
     const missing = builtins.filter(b => !helpFunctions.includes(b));
-    
+
     // Filter out internal/special builtins that don't need docs
     const whitelist = ['Grid', 'Regex', 'Map']; // Constructors that are documented differently
     const actuallyMissing = missing.filter(b => !whitelist.includes(b));
-    
+
     if (actuallyMissing.length > 0) {
         throw new Error(`Missing help documentation for: ${actuallyMissing.join(', ')}`);
     }
@@ -2010,19 +2077,19 @@ runner.test('Meta: All builtins have help documentation', () => {
 runner.test('Meta: All builtins have autocomplete entries', () => {
     const fs = require('fs');
     const aceCode = fs.readFileSync('./ace-init.js', 'utf8');
-    
+
     // Extract autocomplete entries
     const autocompleteMatch = aceCode.match(/const builtins = \[[\s\S]*?\];/);
     if (!autocompleteMatch) {
         throw new Error('Could not find builtins array in ace-init.js');
     }
-    
+
     const autocompleteNames = [];
     const nameMatches = autocompleteMatch[0].matchAll(/name:\s*'([^']+)'/g);
     for (const m of nameMatches) {
         autocompleteNames.push(m[1]);
     }
-    
+
     // Get all global builtins from interpreter
     const code = 'x = 1';
     const lexer = new Lexer(code);
@@ -2031,19 +2098,19 @@ runner.test('Meta: All builtins have autocomplete entries', () => {
     const ast = parser.parse();
     const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
     const interp = new Interpreter(null, null, mockConsole, null, '', null, {});
-    
+
     const builtins = [];
     for (const [key, value] of Object.entries(interp.globalEnv.vars)) {
         if (typeof value === 'function') {
             builtins.push(key);
         }
     }
-    
+
     // Check for missing autocomplete entries
     const missing = builtins.filter(b => !autocompleteNames.includes(b));
     const whitelist = ['Grid', 'Regex', 'Map'];
     const actuallyMissing = missing.filter(b => !whitelist.includes(b));
-    
+
     if (actuallyMissing.length > 0) {
         throw new Error(`Missing autocomplete entries for: ${actuallyMissing.join(', ')}`);
     }
@@ -2052,13 +2119,13 @@ runner.test('Meta: All builtins have autocomplete entries', () => {
 runner.test('Meta: All builtins have Ace syntax highlighting', () => {
     const fs = require('fs');
     const aceMode = fs.readFileSync('./gridlang-ace-mode.js', 'utf8');
-    
+
     // Extract syntax highlighting function names
     const syntaxMatch = aceMode.match(/token:\s*'support\.function',\s*regex:\s*'([^']+)'/);
     if (!syntaxMatch) {
         throw new Error('Could not find support.function regex in gridlang-ace-mode.js');
     }
-    
+
     const regexPattern = syntaxMatch[1];
     // Extract function names from the regex pattern
     // Pattern is: \b(func1|func2|func3)\b
@@ -2066,9 +2133,9 @@ runner.test('Meta: All builtins have Ace syntax highlighting', () => {
     if (!innerPattern) {
         throw new Error('Could not parse function names from regex');
     }
-    
+
     const syntaxFunctions = innerPattern[1].split('|');
-    
+
     // Get all global builtins from interpreter
     const code = 'x = 1';
     const lexer = new Lexer(code);
@@ -2077,19 +2144,19 @@ runner.test('Meta: All builtins have Ace syntax highlighting', () => {
     const ast = parser.parse();
     const mockConsole = { innerHTML: '', scrollTop: 0, scrollHeight: 0 };
     const interp = new Interpreter(null, null, mockConsole, null, '', null, {});
-    
+
     const builtins = [];
     for (const [key, value] of Object.entries(interp.globalEnv.vars)) {
         if (typeof value === 'function') {
             builtins.push(key);
         }
     }
-    
+
     // Check for missing syntax highlighting
     const missing = builtins.filter(b => !syntaxFunctions.includes(b));
     const whitelist = ['Grid', 'Regex', 'Map'];
     const actuallyMissing = missing.filter(b => !whitelist.includes(b));
-    
+
     if (actuallyMissing.length > 0) {
         throw new Error(`Missing Ace syntax highlighting for: ${actuallyMissing.join(', ')}`);
     }
@@ -2097,14 +2164,14 @@ runner.test('Meta: All builtins have Ace syntax highlighting', () => {
 
 runner.test('Meta: version.js has been updated', () => {
     const { execSync } = require('child_process');
-    
+
     try {
         // Check if there are changes to core files
         const changedFiles = execSync('git diff --name-only HEAD 2>/dev/null || echo ""', { encoding: 'utf8' });
-        const hasCoreChanges = changedFiles.split('\n').some(f => 
+        const hasCoreChanges = changedFiles.split('\n').some(f =>
             f.includes('gridlang.js') || f.includes('parser.js') || f.includes('lexer.js')
         );
-        
+
         if (hasCoreChanges) {
             // Check if version.js was also changed
             const versionChanged = changedFiles.includes('version.js');

@@ -144,7 +144,7 @@ function setupAceProxy() {
 
     // Override document.getElementById
     const originalGetElementById = document.getElementById;
-    document.getElementById = function(id) {
+    document.getElementById = function (id) {
         if (id === 'editor') {
             return proxy;
         }
@@ -264,7 +264,10 @@ function addGridLangCompleters() {
                 { name: 'max', value: 'max', score: 100, meta: 'math' },
                 { name: 'random', value: 'random', score: 100, meta: 'math' },
                 { name: 'len', value: 'len', score: 100, meta: 'array' },
-                { name: 'append', value: 'append', score: 100, meta: 'array' },
+                { name: 'add', value: 'add', score: 100, meta: 'array' },
+                { name: 'remove', value: 'remove', score: 100, meta: 'array' },
+                { name: 'append', value: 'append', score: 90, meta: 'array' },
+                { name: 'range', value: 'range', score: 100, meta: 'array' },
                 { name: 'str', value: 'str', score: 100, meta: 'convert' },
                 { name: 'int', value: 'int', score: 100, meta: 'convert' },
                 { name: 'float', value: 'float', score: 100, meta: 'convert' },

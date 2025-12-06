@@ -404,7 +404,11 @@ set_debug(enabled)                    # Enable/disable debug output
 range(n)                              # [0, 1, ..., n-1]
 range(start, end)                     # [start, ..., end-1]
 len(arr)                              # Length of array/map/string
-append(arr, val)                      # Append to array
+add(arr, val)                         # Add element to array (push)
+add(arr, val, index)                  # Insert element at index
+remove(arr)                           # Remove last element (pop)
+remove(arr, index)                    # Remove element at index
+append(arr, val)                      # Append to array (legacy)
 ```
 
 ### Type Conversion
@@ -471,8 +475,9 @@ arr = [1, 2, 3]
 # Mutating methods (modify in place)
 arr.push(4)                           # arr is now [1, 2, 3, 4]
 arr.pop()                             # returns 4, arr is now [1, 2, 3]
-arr.insert(1, 99)                     # arr is now [1, 99, 2, 3]
-arr.remove(99)                        # arr is now [1, 2, 3]
+arr.insert(1, 99)                     # arr is now [1, 99, 2, 3] (uses add())
+arr.remove(99)                        # arr is now [1, 2, 3] (remove by value)
+arr.removeAt(1)                       # removes at index (uses remove())
 arr.clear()                           # arr is now []
 
 # Non-mutating methods (return new arrays)

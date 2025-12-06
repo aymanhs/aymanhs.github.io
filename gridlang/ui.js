@@ -129,18 +129,18 @@ function clearErrorHighlight() {
 
 function highlightErrorLine(lineNumber) {
     if (!lineNumber || lineNumber < 1) return;
-    
+
     currentErrorLine = lineNumber;
-    
+
     // Get the current code
     const code = editor.value;
     const lines = code.split('\n');
-    
+
     // Scroll to the error line
     const lineHeight = 21; // 14px font * 1.5 line-height
     const scrollTo = (lineNumber - 1) * lineHeight;
     editor.scrollTop = scrollTo - editor.clientHeight / 3; // Center it roughly
-    
+
     // Update syntax highlighting with error line marked
     const highlightedLines = lines.map((line, idx) => {
         const lineNum = idx + 1;
@@ -150,7 +150,7 @@ function highlightErrorLine(lineNumber) {
         }
         return highlighted;
     });
-    
+
     highlightCode.innerHTML = highlightedLines.join('\n');
     highlight.scrollTop = editor.scrollTop;
 }
@@ -204,8 +204,10 @@ const builtinFunctions = {
     ],
     "Arrays & Iteration": [
         { name: "range(start, end, step=1)", desc: "Generate array of numbers. If only one arg, starts from 0." },
-        { name: "len(array)", desc: "Get length of array or string." },
-        { name: "append(array, value)", desc: "Add element to end of array." },
+        { name: "len(obj)", desc: "Get length of array, string, or map." },
+        { name: "add(arr, val, index=null)", desc: "Add element to array (push or insert). If index is null, appends." },
+        { name: "remove(arr, index=null)", desc: "Remove element from array (pop or remove at index). If index is null, removes last element." },
+        { name: "append(arr, val)", desc: "Append element to array (legacy, use add)." },
         { name: "for item in array { ... }", desc: "Iterate over array values." },
         { name: "for i, v in array { ... }", desc: "Iterate with index and value. Like enumerate in Python." },
         { name: "for key in map { ... }", desc: "Iterate over map keys." },
@@ -454,14 +456,14 @@ function decompressCode(compressed) {
             console.error('Decompression failed:', e, e2);
             return null;
 
-        // Set version text if available
-        try {
-            if (versionTextEl && window.GRIDLANG_VERSION) {
-                versionTextEl.textContent = String(window.GRIDLANG_VERSION).slice(0, 8);
+            // Set version text if available
+            try {
+                if (versionTextEl && window.GRIDLANG_VERSION) {
+                    versionTextEl.textContent = String(window.GRIDLANG_VERSION).slice(0, 8);
+                }
+            } catch (e) {
+                console.warn('Version display failed:', e);
             }
-        } catch (e) {
-            console.warn('Version display failed:', e);
-        }
         }
     }
 }
@@ -486,13 +488,13 @@ function generateShareURL() {
         const url = new URL(window.location.href);
         url.search = '';
         url.searchParams.set('code', compressed);
-        
+
         // Check URL length (most browsers support ~2000 chars)
         const urlString = url.toString();
         if (urlString.length > 2000) {
             showToast('Warning: URL is very long (' + urlString.length + ' chars). May not work in all browsers.', true);
         }
-        
+
         return urlString;
     } catch (e) {
         console.error('Failed to generate share URL:', e);
@@ -504,7 +506,7 @@ function generateShareURL() {
 function loadFromURL() {
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get('code');
-    
+
     if (codeParam) {
         try {
             const code = decompressCode(codeParam);
@@ -517,10 +519,10 @@ function loadFromURL() {
                 updateHighlight();
                 updateLineNumbers();
                 showToast('Code loaded from URL!');
-                
+
                 // Set dropdown to show it's shared code
                 scriptSelect.value = '';
-                
+
                 // Mark as unsaved so user can save it if they want
                 hasUnsavedChanges = true;
                 lastSavedContent = '';
@@ -528,12 +530,12 @@ function loadFromURL() {
                     dirtyIndicator.style.color = '#fbbf24';
                     dirtyIndicator.title = 'Shared code - not saved yet';
                 }
-                
+
                 // Clear URL after loading (keeps URL clean)
                 const url = new URL(window.location.href);
                 url.search = '';
                 window.history.replaceState({}, document.title, url.toString());
-                
+
                 return true; // Successfully loaded from URL
             } else {
                 showToast('Failed to decode URL', true);
@@ -1014,7 +1016,7 @@ function updateScriptSelect() {
         option.textContent = id;
         filesGroup.appendChild(option);
     });
-    
+
     // Build the EXAMPLES section
     const examplesGroup = document.createElement('optgroup');
     examplesGroup.label = '📚 EXAMPLES';
@@ -1040,7 +1042,7 @@ function updateScriptSelect() {
         option.textContent = label;
         examplesGroup.appendChild(option);
     });
-    
+
     // Rebuild the select
     scriptSelect.innerHTML = '';
     scriptSelect.appendChild(filesGroup);
@@ -1104,7 +1106,7 @@ function loadFilesFromLocalStorage() {
         // Only load the current file if no URL code is being loaded
         const params = new URLSearchParams(window.location.search);
         const hasUrlCode = params.get('code');
-        
+
         if (!hasUrlCode && savedCurrent !== null && savedFiles[savedCurrent] !== undefined) {
             currentFileId = savedCurrent;
             scriptSelect.value = 'file:' + currentFileId;
@@ -1130,7 +1132,7 @@ function loadFilesFromLocalStorage() {
 scriptSelect.addEventListener('change', (e) => {
     const selection = e.target.value;
     if (!selection) return;
-    
+
     if (selection.startsWith('file:')) {
         // User selected a saved file
         const fileId = selection.substring(5); // Remove 'file:' prefix
@@ -1144,7 +1146,7 @@ scriptSelect.addEventListener('change', (e) => {
                 scriptSelect.value = 'file:' + currentFileId;
                 return;
             }
-            
+
             editor.value = examples[exampleId];
             // Update Ace editor if it exists
             if (window.setEditorCode) {
@@ -1158,14 +1160,14 @@ scriptSelect.addEventListener('change', (e) => {
             }
             updateHighlight();
             updateLineNumbers();
-            
+
             // Auto-switch mode based on example name
             if (exampleId.includes('3d') || exampleId.includes('cube')) {
                 switchMode('3d');
             } else {
                 switchMode('2d');
             }
-            
+
             // Keep showing the example name in selector
             scriptSelect.value = 'example:' + exampleId;
         }
@@ -1789,13 +1791,13 @@ function runCode() {
 
         const currentInput = inputs[currentInputId] || '';
         currentInterpreter = new Interpreter(canvas, canvas3d, consoleEl, renderer3d, currentInput, canvasContainer, inputs);
-        
+
         // Set debug mode from checkbox
         currentInterpreter.debugEnabled = debugCheckbox.checked;
-        
+
         // Clear any previous error highlighting
         clearErrorHighlight();
-        
+
         currentInterpreter.run(ast);
 
         // Transform run button to stop button if animation is running
@@ -1804,7 +1806,7 @@ function runCode() {
             runBtn.title = 'Stop';
             runBtn.style.backgroundColor = '#dc2626'; // Red color
             runBtn.style.color = 'white';
-            
+
             // Set callback to reset button when animation stops
             currentInterpreter.onAnimationStop = resetRunButton;
         }
@@ -1813,7 +1815,7 @@ function runCode() {
         const endTime = performance.now();
         const elapsed = endTime - startTime;
         const formattedTime = formatExecutionTime(elapsed);
-        
+
         const completionMsg = `<span style="color:#10b981;font-weight:bold">\n✓ Completed in ${formattedTime}</span>\n`;
         currentInterpreter.cachedConsoleHTML += completionMsg;
         consoleEl.innerHTML = currentInterpreter.cachedConsoleHTML;
@@ -1824,21 +1826,21 @@ function runCode() {
         const endTime = performance.now();
         const elapsed = endTime - startTime;
         const formattedTime = formatExecutionTime(elapsed);
-        
+
         // Format error with location if available
         let errorText = e.message;
         if (e instanceof GridLangError || (e.line !== undefined && e.col !== undefined)) {
             errorText = e.format ? e.format() : `${e.errorType || 'Error'} at line ${e.line}, col ${e.col}: ${e.message}`;
-            
+
             // Highlight the error line in the editor
             if (e.line) {
                 highlightErrorLine(e.line);
             }
         }
-        
+
         const escapedMsg = errorText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const errorMsg = `<span style="color:#f48771">${escapedMsg}</span>\n<span style="color:#ef4444;font-weight:bold">\n✗ Failed after ${formattedTime}</span>\n`;
-        
+
         if (currentInterpreter) {
             currentInterpreter.cachedConsoleHTML += errorMsg;
             consoleEl.innerHTML = currentInterpreter.cachedConsoleHTML;
@@ -1846,7 +1848,7 @@ function runCode() {
             consoleEl.innerHTML += errorMsg;
         }
         consoleEl.scrollTop = consoleEl.scrollHeight;
-        
+
         console.error(e);
 
         // Extract line number and jump to it
@@ -1888,7 +1890,7 @@ function stopAnimation() {
             currentInterpreter.animationId = null;
         }
     }
-    
+
     resetRunButton();
 
     const line = document.createElement('div');

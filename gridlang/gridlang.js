@@ -10,7 +10,7 @@ class GridLangError extends Error {
         this.col = col;
         this.errorType = type;
     }
-    
+
     format() {
         if (this.line !== null && this.col !== null) {
             return `${this.errorType} at line ${this.line}, col ${this.col}: ${this.message}`;
@@ -30,7 +30,7 @@ class GridObject {
         if (!Array.isArray(data[0])) {
             throw new GridLangError('Grid requires a 2D array', null, null, 'TypeError');
         }
-        
+
         this.data = data;
         this.interpreter = interpreter;
         this.height = data.length;
@@ -73,7 +73,7 @@ class GridObject {
                 callback(nx, ny, this.data[ny][nx]);
             }
         }
-    }    visit(callback) {
+    } visit(callback) {
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 callback(x, y, this.data[y][x]);
@@ -115,7 +115,7 @@ class GridObject {
         // Resize canvas if needed
         const requiredWidth = this.width * this.cellSize;
         const requiredHeight = this.height * this.cellSize;
-        
+
         if (canvas.width !== requiredWidth || canvas.height !== requiredHeight) {
             canvas.width = requiredWidth;
             canvas.height = requiredHeight;
@@ -132,10 +132,10 @@ class GridObject {
                 } else {
                     color = this.colorMap[value] || '#ffffff';
                 }
-                
+
                 ctx.fillStyle = color;
                 ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
-                
+
                 // Draw grid lines
                 ctx.strokeStyle = '#cccccc';
                 ctx.lineWidth = 1;
@@ -162,20 +162,20 @@ class Regex {
             throw new GridLangError(`Invalid regex pattern: ${pattern}`, null, null, 'RuntimeError');
         }
     }
-    
+
     test(str) {
         return this.compiled.test(String(str));
     }
-    
+
     match(str) {
         const m = this.compiled.exec(String(str));
         return m ? m[0] : null;
     }
-    
+
     groups(str) {
         const m = this.compiled.exec(String(str));
         if (!m) return null;
-        
+
         // Check if there are named groups
         if (m.groups && Object.keys(m.groups).length > 0) {
             // Return Map object with named groups
@@ -185,11 +185,11 @@ class Regex {
             }
             return groupMap;
         }
-        
+
         // Return array for positional groups
         return Array.from(m).slice(1);
     }
-    
+
     find_all(str) {
         const global = new RegExp(this.pattern, 'g');
         const matches = [];
@@ -199,16 +199,16 @@ class Regex {
         }
         return matches;
     }
-    
+
     replace(str, replacement) {
         const global = new RegExp(this.pattern, 'g');
         return String(str).replace(global, String(replacement));
     }
-    
+
     split(str) {
         return String(str).split(this.compiled);
     }
-    
+
     toString() {
         return `r"${this.pattern}"`;
     }
@@ -265,10 +265,10 @@ class Interpreter {
         this.gridRows = 0;
         this.gridCols = 0;
         this.renderingMode = 'console'; // 'console', '2d', or '3d'
-        
+
         // Debug mode
         this.debugEnabled = false;
-        
+
         // Print buffer for performance
         this.printBuffer = [];
         this.printBufferSize = 100; // Flush every 100 lines
@@ -289,7 +289,7 @@ class Interpreter {
             const msg = args.map(a => this.toString(a)).join(' ');
             this.logBuffered(msg, 'output');
         });
-        
+
         // Debug function - only outputs when debug is enabled
         this.globalEnv.set('debug', (...args) => {
             if (this.debugEnabled) {
@@ -297,7 +297,7 @@ class Interpreter {
                 this.logBuffered(msg, 'debug');
             }
         });
-        
+
         // Enable/disable debug output
         this.globalEnv.set('set_debug', (enabled) => {
             this.debugEnabled = !!enabled;
@@ -359,6 +359,35 @@ class Interpreter {
                 arr.push(val);
             }
             return arr;
+        });
+
+        this.globalEnv.set('add', (arr, val, index = null) => {
+            if (Array.isArray(arr)) {
+                if (index === null) {
+                    arr.push(val);
+                } else {
+                    // Ensure index is an integer
+                    const idx = typeof index === 'number' ? Math.floor(index) : 0;
+                    // Splice inserts at index
+                    arr.splice(idx, 0, val);
+                }
+            }
+            return arr;
+        });
+
+        this.globalEnv.set('remove', (arr, index = null) => {
+            if (Array.isArray(arr)) {
+                if (index === null) {
+                    // Pop from end if no index specified
+                    return arr.pop();
+                } else {
+                    // Remove at index
+                    const idx = typeof index === 'number' ? Math.floor(index) : 0;
+                    const removed = arr.splice(idx, 1);
+                    return removed.length > 0 ? removed[0] : null;
+                }
+            }
+            return null;
         });
 
         // Type conversion functions
@@ -795,7 +824,7 @@ class Interpreter {
 
                     // Call callback and check if it returns false to stop
                     const result = callback(elapsed);
-                    
+
                     if (result === false) {
                         this.animationRunning = false;
                         // End batch if enabled
@@ -877,14 +906,14 @@ class Interpreter {
             }
 
             this.isRecording = false;
-            
+
             if (this.recordingFrames.length === 0) {
                 this.log('No frames to save', 'error');
                 return;
             }
 
             this.log(`Creating GIF from ${this.recordingFrames.length} frames...`, 'output');
-            
+
             // Use GIF.js library
             if (typeof GIF === 'undefined') {
                 throw new Error('GIF library not loaded');
@@ -905,7 +934,7 @@ class Interpreter {
                 img.onload = () => {
                     gif.addFrame(img, { delay: delay, copy: true });
                     loadedCount++;
-                    
+
                     // Start rendering when all frames are loaded
                     if (loadedCount === totalFrames) {
                         this.log('All frames loaded, rendering GIF...', 'output');
@@ -976,23 +1005,23 @@ class Interpreter {
         }
         const escapedMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         this.printBuffer.push(`<span style="color:${color}">${escapedMsg}</span>`);
-        
+
         // Flush if buffer is full or enough time has passed
         const now = performance.now();
-        if (this.printBuffer.length >= this.printBufferSize || 
+        if (this.printBuffer.length >= this.printBufferSize ||
             (now - this.lastFlushTime) >= this.flushInterval) {
             this.flushPrintBuffer();
         }
     }
-    
+
     flushPrintBuffer() {
         if (this.printBuffer.length === 0) return;
-        
+
         // Build string in memory then write to DOM once
         this.cachedConsoleHTML += this.printBuffer.join('\n') + '\n';
         this.consoleElement.innerHTML = this.cachedConsoleHTML;
         this.consoleElement.scrollTop = this.consoleElement.scrollHeight;
-        
+
         this.printBuffer = [];
         this.lastFlushTime = performance.now();
     }
@@ -1032,9 +1061,9 @@ class Interpreter {
             if (this.canvasContainer) {
                 this.canvasContainer.classList.add('console-only');
             }
-            
+
             this.eval(ast, this.globalEnv);
-            
+
             // Flush any remaining buffered prints
             this.flushPrintBuffer();
         } catch (e) {
@@ -1181,23 +1210,23 @@ class Interpreter {
 
             case 'MultiAssignment': {
                 const values = this.eval(node.value, env);
-                
+
                 if (!Array.isArray(values)) {
                     throw new GridLangError('Multiple assignment requires an array or iterable on the right side', node.line, node.col, 'TypeError');
                 }
-                
+
                 // Assign each value to corresponding target
                 for (let i = 0; i < node.targets.length; i++) {
                     const target = node.targets[i];
                     const val = i < values.length ? values[i] : null;
-                    
+
                     try {
                         env.update(target, val);
                     } catch (e) {
                         env.set(target, val);
                     }
                 }
-                
+
                 return values;
             }
 
@@ -1296,7 +1325,7 @@ class Interpreter {
                 if (obj instanceof Map) {
                     return obj.get(property);
                 }
-                
+
                 // Handle Regex methods
                 if (obj instanceof Regex) {
                     const method = obj[property];
@@ -1305,7 +1334,7 @@ class Interpreter {
                     }
                     return null;
                 }
-                
+
                 // Handle String methods
                 if (typeof obj === 'string') {
                     switch (property) {
@@ -1335,7 +1364,7 @@ class Interpreter {
                             return obj.length;
                     }
                 }
-                
+
                 // Handle Array methods
                 if (Array.isArray(obj)) {
                     switch (property) {
@@ -1428,7 +1457,7 @@ class Interpreter {
                             };
                     }
                 }
-                
+
                 // Handle Grid object properties and methods
                 if (obj instanceof GridObject) {
                     switch (property) {
@@ -1460,7 +1489,7 @@ class Interpreter {
                             return () => obj.draw();
                     }
                 }
-                
+
                 return null;
             }
 
@@ -1488,12 +1517,12 @@ class Interpreter {
                     } else if (part.type === 'var') {
                         // Resolve variable path (e.g., ["person", "name"])
                         let value;
-                        
+
                         try {
                             // Start with the first variable name from environment
                             const varName = part.path[0];
                             value = env.get(varName);
-                            
+
                             // Follow the rest of the path (dot notation)
                             for (let i = 1; i < part.path.length; i++) {
                                 const prop = part.path[i];
@@ -1510,7 +1539,7 @@ class Interpreter {
                             // Variable not found - use undefined
                             value = undefined;
                         }
-                        
+
                         result += this.toString(value);
                     }
                 }
