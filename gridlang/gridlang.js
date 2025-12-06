@@ -342,7 +342,42 @@ class Interpreter {
         this.globalEnv.set('tan', Math.tan);
         this.globalEnv.set('min', Math.min);
         this.globalEnv.set('max', Math.max);
-        this.globalEnv.set('random', Math.random);
+        this.globalEnv.set('random', () => Math.random());
+
+        this.globalEnv.set('clamp', (val, min, max) => {
+            if (typeof val !== 'number' || typeof min !== 'number' || typeof max !== 'number') return 0;
+            return Math.min(Math.max(val, min), max);
+        });
+
+        this.globalEnv.set('lerp', (start, end, t) => {
+            if (typeof start !== 'number' || typeof end !== 'number' || typeof t !== 'number') return 0;
+            return start + (end - start) * t;
+        });
+
+        this.globalEnv.set('sign', (num) => {
+            if (typeof num !== 'number') return 0;
+            return Math.sign(num);
+        });
+
+        // Abstract Data Type functions
+        this.globalEnv.set('keys', (obj) => {
+            if (obj instanceof Map) {
+                return Array.from(obj.keys());
+            } else if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+                // For JS objects used as maps internally (less common in gridlang env but possible)
+                return Object.keys(obj);
+            }
+            return [];
+        });
+
+        this.globalEnv.set('values', (obj) => {
+            if (obj instanceof Map) {
+                return Array.from(obj.values());
+            } else if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+                return Object.values(obj);
+            }
+            return [];
+        });
 
         // Array functions
         this.globalEnv.set('len', (arr) => {
@@ -388,6 +423,31 @@ class Interpreter {
                 }
             }
             return null;
+        });
+
+        // Set Operations
+        this.globalEnv.set('merge', (arr1, arr2) => {
+            if (!Array.isArray(arr1) || !Array.isArray(arr2)) return [];
+            return arr1.concat(arr2);
+        });
+
+        this.globalEnv.set('diff', (arr1, arr2) => {
+            if (!Array.isArray(arr1) || !Array.isArray(arr2)) return [];
+            const set2 = new Set(arr2);
+            return arr1.filter(x => !set2.has(x));
+        });
+
+        this.globalEnv.set('intersect', (arr1, arr2) => {
+            if (!Array.isArray(arr1) || !Array.isArray(arr2)) return [];
+            const set2 = new Set(arr2);
+            // Unique intersection
+            const set1 = new Set(arr1);
+            return [...set1].filter(x => set2.has(x));
+        });
+
+        this.globalEnv.set('union', (arr1, arr2) => {
+            if (!Array.isArray(arr1) || !Array.isArray(arr2)) return [];
+            return [...new Set([...arr1, ...arr2])];
         });
 
         // Type conversion functions
@@ -1408,6 +1468,35 @@ class Interpreter {
                             return (sep) => obj.join(String(sep));
                         case 'indexOf':
                             return (item) => obj.indexOf(item);
+                        case 'merge':
+                            return (other) => {
+                                if (!Array.isArray(other)) return [...obj];
+                                return obj.concat(other);
+                            };
+                        case 'diff':
+                            return (other) => {
+                                if (!Array.isArray(other)) return [...obj];
+                                const set2 = new Set(other);
+                                return obj.filter(x => !set2.has(x));
+                            };
+                        case 'intersect':
+                            return (other) => {
+                                if (!Array.isArray(other)) return [];
+                                const set2 = new Set(other);
+                                const set1 = new Set(obj);
+                                return [...set1].filter(x => set2.has(x));
+                            };
+                        case 'union':
+                            return (other) => {
+                                if (!Array.isArray(other)) return [...obj];
+                                return [...new Set([...obj, ...other])];
+                            };
+                        case 'removeAt':
+                            return (index) => {
+                                const idx = typeof index === 'number' ? Math.floor(index) : 0;
+                                const removed = obj.splice(idx, 1);
+                                return removed.length > 0 ? removed[0] : null;
+                            };
                         case 'contains':
                             return (item) => obj.includes(item);
                         case 'count':

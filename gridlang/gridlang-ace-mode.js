@@ -28,7 +28,7 @@ ace.define('ace/mode/gridlang_highlight_rules', function (require, exports, modu
                 },
                 {
                     token: 'support.function',
-                    regex: '\\b(print|debug|set_debug|assert|range|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|random|len|add|remove|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid|time|clock|benchmark|animate|stop_animation|record_animation|save_animation_gif|stop_recording|clear_recording|get_animation_frames|rotate_3d)\\b'
+                    regex: '\\b(print|debug|set_debug|assert|range|abs|sqrt|pow|floor|ceil|round|sin|cos|tan|min|max|clamp|lerp|sign|random|len|add|remove|removeAt|merge|diff|intersect|union|keys|values|append|str|int|float|bool|substr|slice|split|join|upper|lower|trim|replace|starts_with|ends_with|contains|index_of|char_at|char_code|from_char_code|repeat|reverse|init_2d|set_cell|clear_canvas|set_pixel|draw_line|draw_circle|draw_rect|rgb|hsl|init_3d|set_voxel|remove_voxel|get_voxel|clear_3d|begin_3d_batch|end_3d_batch|input_string|input_lines|input_grid|time|clock|benchmark|animate|stop_animation|record_animation|save_animation_gif|stop_recording|clear_recording|get_animation_frames|rotate_3d)\\b'
                 },
                 {
                     token: 'constant.numeric',
@@ -66,6 +66,7 @@ ace.define('ace/mode/gridlang', function (require, exports, module) {
 
     const Mode = function () {
         this.HighlightRules = GridLangHighlightRules;
+        this.lineCommentStart = "#";
     };
 
     oop.inherits(Mode, TextMode);

@@ -346,7 +346,11 @@ ceil(x)                               # Round up
 round(x)                              # Round to nearest
 sin(x), cos(x), tan(x)               # Trigonometry (radians)
 min(a, b, ...)                       # Minimum value
+min(a, b, ...)                       # Minimum value
 max(a, b, ...)                       # Maximum value
+clamp(val, min, max)                  # Constrain val between min and max
+lerp(start, end, t)                   # Linear interpolate between start and end
+sign(x)                               # Returns 1, -1, or 0
 random()                              # Random float [0, 1)
 ```
 
@@ -405,10 +409,22 @@ range(n)                              # [0, 1, ..., n-1]
 range(start, end)                     # [start, ..., end-1]
 len(arr)                              # Length of array/map/string
 add(arr, val)                         # Add element to array (push)
-add(arr, val, index)                  # Insert element at index
-remove(arr)                           # Remove last element (pop)
-remove(arr, index)                    # Remove element at index
-append(arr, val)                      # Append to array (legacy)
+insert(index, value)                # Insert element at index (mutates)
+remove(value)                         # Remove first occurrence of value (mutates)
+removeAt(index)                       # Remove element at index (mutates). Returns removed value.
+clear()                               # Remove all elements
+slice(start, end)                     # Extract subarray from start to end (returns new array)
+concat(other)                         # Combine two arrays (returns new array)
+merge(other)                          # Alias for concat (returns new array)
+diff(other)                           # Set difference (this - other). Returns new array
+intersect(other)                      # Set intersection. Returns new unique array
+union(other)                          # Set union. Returns new unique array
+reverse()                             # Reverse array order (returns new array)
+sort(comparator=null)                 # Sort array (returns new array)
+join(separator)                       # Join elements into string
+indexOf(value)                        # Find first index of value
+contains(value)                       # Check if array contains value
+count(value)                          # Count occurrences of value
 ```
 
 ### Type Conversion

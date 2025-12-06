@@ -207,7 +207,13 @@ const builtinFunctions = {
         { name: "len(obj)", desc: "Get length of array, string, or map." },
         { name: "add(arr, val, index=null)", desc: "Add element to array (push or insert). If index is null, appends." },
         { name: "remove(arr, index=null)", desc: "Remove element from array (pop or remove at index). If index is null, removes last element." },
+        { name: "keys(obj)", desc: "Get array of keys from Map or Object." },
+        { name: "values(obj)", desc: "Get array of values from Map or Object." },
         { name: "append(arr, val)", desc: "Append element to array (legacy, use add)." },
+        { name: "merge(arr1, arr2)", desc: "Concatenate two arrays." },
+        { name: "diff(arr1, arr2)", desc: "Return elements in arr1 that are not in arr2 (set difference)." },
+        { name: "intersect(arr1, arr2)", desc: "Return unique elements present in both arrays." },
+        { name: "union(arr1, arr2)", desc: "Return all unique elements from both arrays." },
         { name: "for item in array { ... }", desc: "Iterate over array values." },
         { name: "for i, v in array { ... }", desc: "Iterate with index and value. Like enumerate in Python." },
         { name: "for key in map { ... }", desc: "Iterate over map keys." },
@@ -218,9 +224,14 @@ const builtinFunctions = {
         { name: "arr.pop()", desc: "Remove and return last element (mutates)." },
         { name: "arr.insert(index, value)", desc: "Insert element at index (mutates)." },
         { name: "arr.remove(value)", desc: "Remove first occurrence of value (mutates)." },
+        { name: "arr.removeAt(index)", desc: "Remove element at index (mutates). Returns removed element." },
         { name: "arr.clear()", desc: "Remove all elements (mutates)." },
         { name: "arr.slice(start, end)", desc: "Extract subarray from start to end (returns new array)." },
         { name: "arr.concat(other)", desc: "Combine two arrays (returns new array)." },
+        { name: "arr.merge(other)", desc: "Alias for concat. Combine two arrays (returns new array)." },
+        { name: "arr.diff(other)", desc: "Set difference (this - other). Returns new array." },
+        { name: "arr.intersect(other)", desc: "Set intersection. Returns new unique array." },
+        { name: "arr.union(other)", desc: "Set union. Returns new unique array." },
         { name: "arr.reverse()", desc: "Reverse array order (returns new array)." },
         { name: "arr.sort(compareFn=null)", desc: "Sort array. Default: numbers numerically, strings alphabetically. With compareFn: custom sort where fn(a,b) returns negative if a<b, 0 if equal, positive if a>b. Returns new array." },
         { name: "arr.join(separator)", desc: "Join elements into string with separator." },
@@ -295,9 +306,13 @@ const builtinFunctions = {
     ],
     "Math": [
         { name: "abs(x)", desc: "Absolute value." },
-        { name: "sqrt(x)", desc: "Square root." },
+        { name: "sqrt(x)", desc: "Square root of x." },
         { name: "pow(x, y)", desc: "x raised to power y." },
         { name: "floor(x)", desc: "Round down to integer." },
+        { name: "clamp(val, min, max)", desc: "Constrain val between min and max." },
+        { name: "lerp(start, end, t)", desc: "Linear interpolate between start and end by t." },
+        { name: "sign(x)", desc: "Return sign of x: 1, -1, or 0." },
+        { name: "min(a, b, ...)", desc: "Return smallest value." },
         { name: "ceil(x)", desc: "Round up to integer." },
         { name: "round(x)", desc: "Round to nearest integer." },
         { name: "sin(x)", desc: "Sine function (radians)." },
@@ -1978,5 +1993,64 @@ document.addEventListener('mouseup', () => {
         document.body.style.userSelect = '';
     }
 });
+
+// Keyboard shortcuts setup
+function setupKeyboardShortcuts(aceInstance) {
+    if (!aceInstance) return;
+
+    // Run Code: Ctrl+Enter (Cmd+Enter on Mac)
+    aceInstance.commands.addCommand({
+        name: 'runCode',
+        bindKey: { win: 'Ctrl-Enter', mac: 'Command-Enter' },
+        exec: function (editor) {
+            console.log('Shortcut: Run Code');
+            // Trigger the run button click to reuse logic (animation handling etc)
+            runBtn.click();
+        },
+        readOnly: true // Allow in read only mode if needed
+    });
+
+    // Save File: Ctrl+S (Cmd+S on Mac)
+    aceInstance.commands.addCommand({
+        name: 'saveFile',
+        bindKey: { win: 'Ctrl-S', mac: 'Command-S' },
+        exec: function (editor) {
+            console.log('Shortcut: Save File');
+            saveFileBtn.click();
+            // Prevent browser save dialog
+            return true;
+        },
+        readOnly: true
+    });
+
+    // Cut or Remove Line: Ctrl+X (Cmd+X on Mac)
+    // If selection is empty, remove line. If selection exists, perform standard cut.
+    aceInstance.commands.addCommand({
+        name: 'cutOrRemoveLine',
+        bindKey: { win: 'Ctrl-X', mac: 'Command-X' },
+        exec: function (editor) {
+            if (editor.selection.isEmpty()) {
+                editor.removeLines();
+                return true;
+            }
+            // If selection exists, return false to let Ace handle the default behavior (Cut)
+            return false;
+        },
+        readOnly: false
+    });
+
+    console.log('✓ Keyboard shortcuts initialized');
+}
+
+// Listen for Ace Editor ready event
+window.addEventListener('GridLangAceReady', (e) => {
+    console.log('GridLangAceReady received');
+    setupKeyboardShortcuts(e.detail.editor);
+});
+
+// Fallback: Check if already loaded (race condition safety)
+if (window.aceEditor) {
+    setupKeyboardShortcuts(window.aceEditor);
+}
 
 // Don't auto-run code on load - user must explicitly run

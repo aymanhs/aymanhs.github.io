@@ -69,6 +69,10 @@ function initAceEditor() {
         if (highlight) highlight.style.display = 'none';
 
         console.log('✓ Ace Editor initialized');
+
+        // Dispatch event for ui.js to know editor is ready
+        window.dispatchEvent(new CustomEvent('GridLangAceReady', { detail: { editor: aceEditor } }));
+
         return true;
     } catch (error) {
         console.error('Failed to initialize Ace:', error);
@@ -260,12 +264,28 @@ function addGridLangCompleters() {
                 { name: 'sin', value: 'sin', score: 100, meta: 'math' },
                 { name: 'cos', value: 'cos', score: 100, meta: 'math' },
                 { name: 'tan', value: 'tan', score: 100, meta: 'math' },
+                { name: 'arr.slice', value: 'slice', score: 100, meta: 'method' },
+                { name: 'arr.concat', value: 'concat', score: 100, meta: 'method' },
+                { name: 'arr.merge', value: 'merge', score: 100, meta: 'method' },
+                { name: 'arr.diff', value: 'diff', score: 100, meta: 'method' },
+                { name: 'arr.intersect', value: 'intersect', score: 100, meta: 'method' },
+                { name: 'arr.union', value: 'union', score: 100, meta: 'method' },
+                { name: 'arr.reverse', value: 'reverse', score: 100, meta: 'method' },
                 { name: 'min', value: 'min', score: 100, meta: 'math' },
                 { name: 'max', value: 'max', score: 100, meta: 'math' },
+                { name: 'clamp', value: 'clamp', score: 100, meta: 'math' },
+                { name: 'lerp', value: 'lerp', score: 100, meta: 'math' },
+                { name: 'sign', value: 'sign', score: 100, meta: 'math' },
                 { name: 'random', value: 'random', score: 100, meta: 'math' },
                 { name: 'len', value: 'len', score: 100, meta: 'array' },
                 { name: 'add', value: 'add', score: 100, meta: 'array' },
                 { name: 'remove', value: 'remove', score: 100, meta: 'array' },
+                { name: 'merge', value: 'merge', score: 100, meta: 'array' },
+                { name: 'diff', value: 'diff', score: 100, meta: 'array' },
+                { name: 'intersect', value: 'intersect', score: 100, meta: 'array' },
+                { name: 'union', value: 'union', score: 100, meta: 'array' },
+                { name: 'keys', value: 'keys', score: 100, meta: 'map' },
+                { name: 'values', value: 'values', score: 100, meta: 'map' },
                 { name: 'append', value: 'append', score: 90, meta: 'array' },
                 { name: 'range', value: 'range', score: 100, meta: 'array' },
                 { name: 'str', value: 'str', score: 100, meta: 'convert' },

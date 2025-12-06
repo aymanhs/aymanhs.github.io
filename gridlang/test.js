@@ -803,6 +803,98 @@ runner.test('Runtime: F-string with array element access', () => {
     assertArrayEqual(result.output, ['First: 10']);
 });
 
+// ========== NEW BUILTIN TESTS ==========
+runner.test('Runtime: clamp() function', () => {
+    const result = evaluate('print(clamp(10, 0, 5))\nprint(clamp(-5, 0, 10))\nprint(clamp(3, 0, 5))');
+    assertArrayEqual(result.output, ['5', '0', '3']);
+});
+
+runner.test('Runtime: lerp() function', () => {
+    const result = evaluate('print(lerp(0, 10, 0.5))\nprint(lerp(10, 20, 0.25))');
+    assertArrayEqual(result.output, ['5', '12.5']);
+});
+
+runner.test('Runtime: sign() function', () => {
+    const result = evaluate('print(sign(50))\nprint(sign(-50))\nprint(sign(0))');
+    assertArrayEqual(result.output, ['1', '-1', '0']);
+});
+
+runner.test('Runtime: keys() function', () => {
+    const result = evaluate('obj = {x: 1, y: 2}\nprint(keys(obj)[0])\nprint(len(keys(obj)))');
+    // iterate order not guaranteed in tests usually but for simple objects in v8 usually insertion order
+    // But let's check length for sure and presence ideally. Here checking simple output
+    // Assuming x is first.
+    assertArrayEqual(result.output, ['x', '2']);
+});
+
+runner.test('Runtime: values() function', () => {
+    const result = evaluate('obj = {x: 10, y: 20}\nvals = values(obj)\nprint(len(vals))\nprint(vals[0] + vals[1])');
+    assertArrayEqual(result.output, ['2', '30']);
+});
+
+runner.test('Runtime: merge() function', () => {
+    const result = evaluate('print(merge([1, 2], [3, 4]))');
+    // Result object has {output: [...], env: ...} and evaluate returns evaluate code result if simple
+    // The previous tests check output array of strings for print.
+    // merge([1, 2], [3, 4]) -> [1, 2, 3, 4]
+    // print([1, 2, 3, 4]) -> "[1, 2, 3, 4]" string
+    assertArrayEqual(result.output, ['[1, 2, 3, 4]']);
+});
+
+runner.test('Runtime: diff() function', () => {
+    const result = evaluate('print(diff([1, 2, 3, 4], [2, 4]))');
+    // [1, 3] -> "[1, 3]"
+    assertArrayEqual(result.output, ['[1, 3]']);
+});
+
+runner.test('Runtime: intersect() function', () => {
+    const result = evaluate('print(intersect([1, 2, 3], [2, 3, 4]))');
+    // [2, 3] -> "[2, 3]"
+    assertArrayEqual(result.output, ['[2, 3]']);
+});
+
+runner.test('Runtime: union() function', () => {
+    const result = evaluate('print(union([1, 2], [2, 3]))');
+    // [1, 2, 3] -> "[1, 2, 3]"
+    assertArrayEqual(result.output, ['[1, 2, 3]']);
+});
+
+runner.test('Runtime: Array methods (merge, diff, intersect, union)', () => {
+    // merge
+    let code = 'arr = [1, 2]\nprint(arr.merge([3, 4]))';
+    let result = evaluate(code);
+    assertArrayEqual(result.output, ['[1, 2, 3, 4]']);
+
+    // diff
+    code = 'arr = [1, 2, 3, 4]\nprint(arr.diff([2, 4]))';
+    result = evaluate(code);
+    assertArrayEqual(result.output, ['[1, 3]']);
+
+    // intersect
+    code = 'arr = [1, 2, 3]\nprint(arr.intersect([2, 3, 4]))';
+    result = evaluate(code);
+    assertArrayEqual(result.output, ['[2, 3]']);
+
+    // union
+    code = 'arr = [1, 2]\nprint(arr.union([2, 3]))';
+    result = evaluate(code);
+    assertArrayEqual(result.output, ['[1, 2, 3]']);
+});
+
+runner.test('Runtime: Array method removeAt', () => {
+    let code = `
+    arr = [1, 2, 3]
+    val = arr.removeAt(1)
+    res = [val, arr]
+    `;
+    let result = evaluate(code);
+    // 2, [1, 3]
+    // print not used so checking env not supported by this assertArrayEqual which expects output array
+    // manual check
+    assertEqual(result.env.get('val'), 2);
+    assertArrayEqual(result.env.get('arr'), [1, 3]);
+});
+
 // ========== BUILTIN FUNCTIONS TESTS ==========
 
 // Math functions
