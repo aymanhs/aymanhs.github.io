@@ -2039,6 +2039,57 @@ function setupKeyboardShortcuts(aceInstance) {
         readOnly: false
     });
 
+
+    // --- VS Code Compatibility ---
+
+    // Move Line Up: Alt+Up
+    aceInstance.commands.addCommand({
+        name: 'moveLineUp',
+        bindKey: { win: 'Alt-Up', mac: 'Option-Up' },
+        exec: function (editor) { editor.execCommand('movelinesup'); },
+        readOnly: false
+    });
+
+    // Move Line Down: Alt+Down
+    aceInstance.commands.addCommand({
+        name: 'moveLineDown',
+        bindKey: { win: 'Alt-Down', mac: 'Option-Down' },
+        exec: function (editor) { editor.execCommand('movelinesdown'); },
+        readOnly: false
+    });
+
+    // Copy Line Up: Shift+Alt+Up
+    aceInstance.commands.addCommand({
+        name: 'copyLineUp',
+        bindKey: { win: 'Shift-Alt-Up', mac: 'Shift-Option-Up' },
+        exec: function (editor) { editor.execCommand('copylinesup'); },
+        readOnly: false
+    });
+
+    // Copy Line Down: Shift+Alt+Down
+    aceInstance.commands.addCommand({
+        name: 'copyLineDown',
+        bindKey: { win: 'Shift-Alt-Down', mac: 'Shift-Option-Down' },
+        exec: function (editor) { editor.execCommand('copylinesdown'); },
+        readOnly: false
+    });
+
+    // Delete Line: Ctrl+Shift+K
+    aceInstance.commands.addCommand({
+        name: 'deleteLineVSCode',
+        bindKey: { win: 'Ctrl-Shift-K', mac: 'Command-Shift-K' },
+        exec: function (editor) { editor.execCommand('removeline'); },
+        readOnly: false
+    });
+
+    // Select Next Occurrence (Multi-cursor): Ctrl+D
+    aceInstance.commands.addCommand({
+        name: 'selectNextOccurrence',
+        bindKey: { win: 'Ctrl-D', mac: 'Command-D' },
+        exec: function (editor) { editor.execCommand('selectMoreAfter'); },
+        readOnly: false
+    });
+
     console.log('✓ Keyboard shortcuts initialized');
 }
 
