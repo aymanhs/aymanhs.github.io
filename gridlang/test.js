@@ -2110,6 +2110,63 @@ runner.test('README: Grid object examples work', () => {
     assertArrayEqual(result.output, ['2', '2']);
 });
 
+// ============= IN OPERATOR TESTS =============
+runner.test('In operator: check key in map', () => {
+    const result = evaluate('m = {"a": 1, "b": 2}\nprint("a" in m)\nprint("c" in m)');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('In operator: check element in array', () => {
+    const result = evaluate('arr = [1, 2, 3]\nprint(2 in arr)\nprint(5 in arr)');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('In operator: check substring in string', () => {
+    const result = evaluate('print("hello" in "hello world")\nprint("xyz" in "hello world")');
+    assertArrayEqual(result.output, ['true', 'false']);
+});
+
+runner.test('In operator: in conditional', () => {
+    const result = evaluate('m = {"x": 10}\nif "x" in m { print("found") } else { print("not found") }');
+    assertArrayEqual(result.output, ['found']);
+});
+
+runner.test('In operator: with variables', () => {
+    const result = evaluate('m = {"apple": 5, "banana": 3}\nkey = "apple"\nprint(key in m)');
+    assertArrayEqual(result.output, ['true']);
+});
+
+// ============= UNDEFINED TESTS =============
+runner.test('Undefined: undefined literal', () => {
+    const result = evaluate('x = undefined\nprint(x)');
+    assertArrayEqual(result.output, ['undefined']);
+});
+
+runner.test('Undefined: map key not found returns undefined', () => {
+    const result = evaluate('m = {"a": 1}\nval = m["b"]\nprint(val)');
+    assertArrayEqual(result.output, ['undefined']);
+});
+
+runner.test('Undefined: equality check with undefined', () => {
+    const result = evaluate('m = {"a": 1}\nval = m["b"]\nprint(val == undefined)');
+    assertArrayEqual(result.output, ['true']);
+});
+
+runner.test('Undefined: undefined is falsey', () => {
+    const result = evaluate('x = undefined\nif x { print("truthy") } else { print("falsey") }');
+    assertArrayEqual(result.output, ['falsey']);
+});
+
+runner.test('Undefined: check map key with undefined', () => {
+    const result = evaluate('m = {"a": 1, "b": 2}\nif m["c"] == undefined { print("not found") }');
+    assertArrayEqual(result.output, ['not found']);
+});
+
+runner.test('Undefined: in operator vs undefined check', () => {
+    const result = evaluate('m = {"a": null}\nprint("a" in m)\nprint(m["a"] == undefined)\nprint(m["b"] == undefined)');
+    assertArrayEqual(result.output, ['true', 'false', 'true']);
+});
+
 // ============= META TESTS =============
 // Tests that verify the development process itself
 

@@ -24,7 +24,7 @@ ace.define('ace/mode/gridlang_highlight_rules', function (require, exports, modu
                 },
                 {
                     token: 'keyword',
-                    regex: '\\b(if|elif|elsif|else|for|while|func|return|true|false|null|in|and|or|not)\\b'
+                    regex: '\\b(if|elif|elsif|else|for|while|func|return|true|false|null|undefined|in|and|or|not)\\b'
                 },
                 {
                     token: 'support.function',

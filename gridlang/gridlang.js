@@ -1370,7 +1370,7 @@ class Interpreter {
                 if (Array.isArray(obj)) {
                     return obj[index];
                 } else if (obj instanceof Map) {
-                    return obj.get(index);
+                    return obj.has(index) ? obj.get(index) : undefined;
                 } else if (typeof obj === 'string') {
                     return obj[index];
                 } else if (typeof obj === 'object' && obj !== null) {
@@ -1646,6 +1646,9 @@ class Interpreter {
             case 'Null':
                 return null;
 
+            case 'Undefined':
+                return undefined;
+
             case 'Array':
                 return node.elements.map(el => this.eval(el, env));
 
@@ -1692,6 +1695,15 @@ class Interpreter {
             case '<=': return left <= right;
             case '>': return left > right;
             case '>=': return left >= right;
+            case 'in':
+                if (right instanceof Map) {
+                    return right.has(left);
+                } else if (Array.isArray(right)) {
+                    return right.includes(left);
+                } else if (typeof right === 'string') {
+                    return right.includes(String(left));
+                }
+                return false;
             default:
                 throw new GridLangError(`Unknown operator: ${node.op}`, node.line, node.col, 'RuntimeError');
         }
@@ -1709,7 +1721,7 @@ class Interpreter {
     }
 
     isTruthy(value) {
-        if (value === null || value === false) return false;
+        if (value === null || value === false || value === undefined) return false;
         if (value === 0 || value === '') return false;
         return true;
     }

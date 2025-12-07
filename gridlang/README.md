@@ -35,6 +35,47 @@ python3 -m http.server 8000
 x = 10
 name = "GridLang"
 flag = true
+empty = null         # Explicit null value
+notFound = undefined # Undefined value (returned when map key doesn't exist)
+```
+
+**Special Values:**
+- `null` - Explicit null/empty value (falsey)
+- `undefined` - Returned when accessing non-existent map keys (falsey)
+- Use `key in map` to check if a key exists (even if value is `null`)
+- Use `map[key] == undefined` to check if key is missing
+
+```go
+# undefined vs null
+m = {"a": 1, "b": null}
+
+# Check key existence with 'in'
+print("a" in m)  # true (key exists)
+print("b" in m)  # true (key exists, even though value is null)
+print("c" in m)  # false (key doesn't exist)
+
+# undefined is returned for missing keys
+print(m["a"])  # 1
+print(m["b"])  # null
+print(m["c"])  # undefined
+
+# Check with undefined
+if m["c"] == undefined {
+    print("Key 'c' not found")
+}
+
+# Both undefined and null are falsey
+if m["b"] {
+    print("truthy")
+} else {
+    print("falsey - null is falsey")  # This prints
+}
+
+if m["c"] {
+    print("truthy")
+} else {
+    print("falsey - undefined is falsey")  # This prints
+}
 ```
 
 ### Arrays
@@ -279,6 +320,61 @@ for k, v in {x: 10, y: 20} {
 # While loops
 while x < 100 {
     x = x * 2
+}
+```
+
+### Operators
+
+**Membership/Containment: `in`**
+```go
+# Check if key exists in map
+config = {"debug": true, "timeout": 30}
+if "debug" in config {
+    print("Debug mode available")
+}
+
+# Check if element exists in array
+primes = [2, 3, 5, 7, 11]
+if 7 in primes {
+    print("7 is prime")
+}
+
+# Check if substring exists in string
+text = "hello world"
+if "world" in text {
+    print("Found 'world'")
+}
+
+# Combine with not
+if "admin" not in users {
+    print("Admin user missing")
+}
+
+# Use with variables
+key = "status"
+if key in response {
+    print(f"Status: {response[key]}")
+}
+```
+
+**Difference: `in` vs `undefined`**
+```go
+# 'in' checks key existence (even if value is null)
+m = {"a": 1, "b": null}
+
+print("b" in m)        # true (key exists)
+print(m["b"] == null)  # true (value is null)
+
+print("c" in m)            # false (key doesn't exist)
+print(m["c"] == undefined) # true (returns undefined)
+
+# Best practice: use 'in' to check existence
+if "key" in map {
+    # Key exists (value might be null, but key is present)
+}
+
+if map["key"] == undefined {
+    # Key definitely doesn't exist
 }
 ```
 

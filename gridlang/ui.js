@@ -361,6 +361,13 @@ const builtinFunctions = {
         { name: "input_string(filename=null)", desc: "Get raw input data as string. If filename is provided, reads from that named input, otherwise reads from active input." },
         { name: "input_lines(filename=null)", desc: "Get input as array of lines. If filename is provided, reads from that named input." },
         { name: "input_grid(type='int', separator=auto, filename=null)", desc: "Parse input as 2D grid. type: 'int', 'float', 'char', or 'string'. Auto-detects separator (space/comma/tabs). If filename is provided, reads from that named input." },
+    ],
+    "Operators": [
+        { name: "key in map", desc: "Check if key exists in Map: returns true/false." },
+        { name: "value in array", desc: "Check if value exists in Array: returns true/false." },
+        { name: "substring in string", desc: "Check if substring exists in string: returns true/false." },
+        { name: "undefined", desc: "Special value returned when map key doesn't exist. Falsey. Check with: val == undefined" },
+        { name: "null", desc: "Explicit null/empty value. Falsey. Different from undefined." },
     ]
 };
 

@@ -57,6 +57,7 @@ const TokenType = {
     TRUE: 'TRUE',
     FALSE: 'FALSE',
     NULL: 'NULL',
+    UNDEFINED: 'UNDEFINED',
     NEWLINE: 'NEWLINE',
     EOF: 'EOF'
 };
@@ -74,6 +75,7 @@ const KEYWORDS = {
     'true': TokenType.TRUE,
     'false': TokenType.FALSE,
     'null': TokenType.NULL,
+    'undefined': TokenType.UNDEFINED,
     'and': TokenType.AND,
     'or': TokenType.OR,
     'not': TokenType.NOT

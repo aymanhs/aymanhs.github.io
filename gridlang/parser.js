@@ -376,9 +376,9 @@ class Parser {
     comparison() {
         let left = this.additive();
         
-        while (this.match(TokenType.EQ, TokenType.NE, TokenType.LT, TokenType.LE, TokenType.GT, TokenType.GE)) {
+        while (this.match(TokenType.EQ, TokenType.NE, TokenType.LT, TokenType.LE, TokenType.GT, TokenType.GE, TokenType.IN)) {
             const loc = this.loc();
-            const op = this.current().value;
+            const op = this.current().type === TokenType.IN ? 'in' : this.current().value;
             this.advance();
             const right = this.additive();
             left = { type: 'BinaryOp', op, left, right, ...loc };
@@ -525,6 +525,12 @@ class Parser {
             const loc = this.loc();
             this.advance();
             return { type: 'Null', value: null, ...loc };
+        }
+        
+        if (this.match(TokenType.UNDEFINED)) {
+            const loc = this.loc();
+            this.advance();
+            return { type: 'Undefined', value: undefined, ...loc };
         }
         
         if (this.match(TokenType.IDENT)) {
