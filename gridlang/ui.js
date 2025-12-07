@@ -1782,6 +1782,11 @@ print("Mandelbrot set complete!")`
 };
 
 function runCode() {
+    // Auto-save if we are editing a file (not an example)
+    if (scriptSelect.value && scriptSelect.value.startsWith('file:')) {
+        saveFilesToLocalStorage();
+    }
+
     const code = editor.value;
     consoleEl.innerHTML = '';
 
