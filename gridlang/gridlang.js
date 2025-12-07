@@ -891,6 +891,7 @@ class Interpreter {
                         if (opts.batch3d && this.renderer3d) {
                             this.renderer3d.endBatch();
                         }
+                        this.flushPrintBuffer();
                         const totalTime = elapsed.toFixed(3);
                         this.log(`Animation stopped: ${frameCount} frames in ${totalTime}s (avg: ${(frameCount / elapsed).toFixed(1)} fps)`, 'output');
                         // Call stop callback if provided
@@ -919,6 +920,7 @@ class Interpreter {
                         this.recordingFrames.push(frameData);
                     }
                 } catch (e) {
+                    this.flushPrintBuffer();
                     this.log(`Animation error: ${e.message}`, 'error');
                     this.animationRunning = false;
                     const totalTime = (performance.now() / 1000 - this.animationStartTime).toFixed(3);
