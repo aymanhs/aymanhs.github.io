@@ -366,6 +366,10 @@ const builtinFunctions = {
         { name: "key in map", desc: "Check if key exists in Map: returns true/false." },
         { name: "value in array", desc: "Check if value exists in Array: returns true/false." },
         { name: "substring in string", desc: "Check if substring exists in string: returns true/false." },
+        { name: "condition ? true_val : false_val", desc: "Ternary operator: Returns true_val if condition is truthy, else false_val." },
+        { name: "value ?: default", desc: "Elvis operator: Returns value if truthy, else default. Use for default values: port ?: 8080" },
+        { name: "break", desc: "Exit loop immediately (for/while)." },
+        { name: "continue", desc: "Skip to next iteration of loop (for/while)." },
         { name: "undefined", desc: "Special value returned when map key doesn't exist. Falsey. Check with: val == undefined" },
         { name: "null", desc: "Explicit null/empty value. Falsey. Different from undefined." },
     ]

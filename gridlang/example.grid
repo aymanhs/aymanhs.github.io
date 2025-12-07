@@ -1,0 +1,25 @@
+# Example GridLang script for CLI
+print("Hello from GridLang CLI!")
+
+# Test basic features
+x = 10
+y = 20
+sum = x + y
+print(f"x + y = {sum}")
+
+# Test arrays and loops
+nums = [1, 2, 3, 4, 5]
+total = 0
+for n in nums {
+    total = total + n
+}
+print(f"Sum: {total}")
+
+# Test maps
+data = {"name": "GridLang", "version": "sr09tx51"}
+print(f"Language: {data.name} v{data.version}")
+
+# Test ternary and elvis
+status = x > 5 ? "big" : "small"
+default = data["missing"] ?: "not found"
+print(f"Status: {status}, Default: {default}")

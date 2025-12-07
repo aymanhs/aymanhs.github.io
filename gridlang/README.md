@@ -321,6 +321,18 @@ for k, v in {x: 10, y: 20} {
 while x < 100 {
     x = x * 2
 }
+
+# Break - exit loop early
+for i in range(100) {
+    if i > 10 { break }
+    print(i)
+}
+
+# Continue - skip to next iteration
+for i in range(10) {
+    if i % 2 == 0 { continue }  # Skip even numbers
+    print(i)  # Only prints odd numbers
+}
 ```
 
 ### Operators
@@ -355,6 +367,56 @@ key = "status"
 if key in response {
     print(f"Status: {response[key]}")
 }
+```
+
+**Ternary Operator: `? :`**
+```go
+# Conditional expression: condition ? true_value : false_value
+age = 20
+status = age >= 18 ? "adult" : "minor"
+print(status)  # "adult"
+
+# Find max/min
+a = 10
+b = 20
+max = a > b ? a : b
+print(max)  # 20
+
+# Nested ternary
+score = 85
+grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : "F"
+print(grade)  # "B"
+
+# Inline in expressions
+result = (x > 0 ? x : -x) * 2  # abs(x) * 2
+```
+
+**Elvis Operator: `?:` (Default Values)**
+```go
+# Returns left if truthy, otherwise right
+# Similar to || in JavaScript, but for default values
+
+# Use default when value is null/undefined/falsey
+name = user_input ?: "Anonymous"
+port = config["port"] ?: 8080
+count = map["count"] ?: 0
+
+# Chain multiple defaults
+value = option1 ?: option2 ?: option3 ?: "final default"
+
+# Common pattern: configuration with defaults
+config = {"host": "localhost"}
+host = config["host"] ?: "0.0.0.0"
+port = config["port"] ?: 3000
+debug = config["debug"] ?: false
+
+print(f"Server: {host}:{port}")
+
+# With map access
+m = {"a": 1, "b": null}
+val_a = m["a"] ?: 100  # 1 (exists and truthy)
+val_b = m["b"] ?: 100  # 100 (exists but null/falsey)
+val_c = m["c"] ?: 100  # 100 (doesn't exist, returns undefined)
 ```
 
 **Difference: `in` vs `undefined`**

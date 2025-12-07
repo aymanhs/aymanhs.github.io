@@ -53,11 +53,15 @@ const TokenType = {
     WHILE: 'WHILE',
     FUNC: 'FUNC',
     RETURN: 'RETURN',
+    BREAK: 'BREAK',
+    CONTINUE: 'CONTINUE',
     IN: 'IN',
     TRUE: 'TRUE',
     FALSE: 'FALSE',
     NULL: 'NULL',
     UNDEFINED: 'UNDEFINED',
+    QUESTION: 'QUESTION',
+    ELVIS: 'ELVIS',
     NEWLINE: 'NEWLINE',
     EOF: 'EOF'
 };
@@ -71,6 +75,8 @@ const KEYWORDS = {
     'while': TokenType.WHILE,
     'func': TokenType.FUNC,
     'return': TokenType.RETURN,
+    'break': TokenType.BREAK,
+    'continue': TokenType.CONTINUE,
     'in': TokenType.IN,
     'true': TokenType.TRUE,
     'false': TokenType.FALSE,
@@ -410,6 +416,12 @@ class Lexer {
                 this.advance();
                 return new Token(TokenType.PERCENT_ASSIGN, '%=', line, col);
             }
+            // Elvis operator ?: (default value)
+            if (this.current() === '?' && this.peek() === ':') {
+                this.advance();
+                this.advance();
+                return new Token(TokenType.ELVIS, '?:', line, col);
+            }
 
             // Single-character operators
             const char = this.current();
@@ -433,6 +445,7 @@ class Lexer {
                 case ',': return new Token(TokenType.COMMA, ',', line, col);
                 case ':': return new Token(TokenType.COLON, ':', line, col);
                 case '.': return new Token(TokenType.DOT, '.', line, col);
+                case '?': return new Token(TokenType.QUESTION, '?', line, col);
                 default:
                     throw new Error(`Unknown character '${char}' at line ${line}, col ${col}`);
             }

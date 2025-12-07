@@ -2167,6 +2167,79 @@ runner.test('Undefined: in operator vs undefined check', () => {
     assertArrayEqual(result.output, ['true', 'false', 'true']);
 });
 
+// ============= BREAK AND CONTINUE TESTS =============
+runner.test('Break: exit for loop early', () => {
+    const result = evaluate('for i in range(10) {\n  if i == 5 { break }\n  print(i)\n}');
+    assertArrayEqual(result.output, ['0', '1', '2', '3', '4']);
+});
+
+runner.test('Break: exit while loop early', () => {
+    const result = evaluate('i = 0\nwhile i < 10 {\n  if i == 3 { break }\n  print(i)\n  i += 1\n}');
+    assertArrayEqual(result.output, ['0', '1', '2']);
+});
+
+runner.test('Continue: skip to next iteration in for loop', () => {
+    const result = evaluate('for i in range(5) {\n  if i == 2 { continue }\n  print(i)\n}');
+    assertArrayEqual(result.output, ['0', '1', '3', '4']);
+});
+
+runner.test('Continue: skip to next iteration in while loop', () => {
+    const result = evaluate('i = 0\nwhile i < 5 {\n  i += 1\n  if i == 3 { continue }\n  print(i)\n}');
+    assertArrayEqual(result.output, ['1', '2', '4', '5']);
+});
+
+runner.test('Break: nested loops only breaks inner', () => {
+    const result = evaluate('for i in range(3) {\n  for j in range(3) {\n    if j == 1 { break }\n    print(f"{i},{j}")\n  }\n}');
+    assertArrayEqual(result.output, ['0,0', '1,0', '2,0']);
+});
+
+// ============= TERNARY OPERATOR TESTS =============
+runner.test('Ternary: basic conditional', () => {
+    const result = evaluate('x = 10\ny = x > 5 ? "big" : "small"\nprint(y)');
+    assertArrayEqual(result.output, ['big']);
+});
+
+runner.test('Ternary: with numbers', () => {
+    const result = evaluate('a = 10\nb = 20\nmax = a > b ? a : b\nprint(max)');
+    assertArrayEqual(result.output, ['20']);
+});
+
+runner.test('Ternary: nested ternary', () => {
+    const result = evaluate('x = 15\nresult = x > 20 ? "large" : x > 10 ? "medium" : "small"\nprint(result)');
+    assertArrayEqual(result.output, ['medium']);
+});
+
+runner.test('Ternary: in function call', () => {
+    const result = evaluate('x = 5\nprint(x > 0 ? "positive" : "negative")');
+    assertArrayEqual(result.output, ['positive']);
+});
+
+// ============= ELVIS OPERATOR TESTS =============
+runner.test('Elvis: use default when null', () => {
+    const result = evaluate('x = null\ny = x ?: "default"\nprint(y)');
+    assertArrayEqual(result.output, ['default']);
+});
+
+runner.test('Elvis: use default when undefined', () => {
+    const result = evaluate('m = {}\nval = m["key"] ?: "not found"\nprint(val)');
+    assertArrayEqual(result.output, ['not found']);
+});
+
+runner.test('Elvis: keep value when truthy', () => {
+    const result = evaluate('x = 42\ny = x ?: "default"\nprint(y)');
+    assertArrayEqual(result.output, ['42']);
+});
+
+runner.test('Elvis: chain multiple defaults', () => {
+    const result = evaluate('a = null\nb = undefined\nc = 0\nd = a ?: b ?: c ?: "final"\nprint(d)');
+    assertArrayEqual(result.output, ['final']);
+});
+
+runner.test('Elvis: with map access', () => {
+    const result = evaluate('config = {"port": 8080}\nhost = config["host"] ?: "localhost"\nport = config["port"] ?: 3000\nprint(host)\nprint(port)');
+    assertArrayEqual(result.output, ['localhost', '8080']);
+});
+
 // ============= META TESTS =============
 // Tests that verify the development process itself
 

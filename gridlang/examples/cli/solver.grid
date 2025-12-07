@@ -1,0 +1,29 @@
+# Advent of Code style problem solver
+# Read input, process, and output result
+
+# Example: Sum of all numbers in a file
+data = read_file("numbers.txt")
+lines = data.split("\n")
+
+total = 0
+for line in lines {
+    if len(line) > 0 {
+        num = int(line)
+        total = total + num
+    }
+}
+
+print(f"Part 1: {total}")
+
+# Part 2: Count numbers greater than 10
+count = 0
+for line in lines {
+    if len(line) > 0 {
+        num = int(line)
+        if num > 10 {
+            count = count + 1
+        }
+    }
+}
+
+print(f"Part 2: {count}")

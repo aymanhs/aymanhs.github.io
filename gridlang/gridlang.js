@@ -153,6 +153,18 @@ class ReturnValue {
     }
 }
 
+class BreakException {
+    constructor() {
+        this.isBreak = true;
+    }
+}
+
+class ContinueException {
+    constructor() {
+        this.isContinue = true;
+    }
+}
+
 class Regex {
     constructor(pattern) {
         this.pattern = pattern;
@@ -1167,7 +1179,16 @@ class Interpreter {
 
             case 'While':
                 while (this.isTruthy(this.eval(node.condition, env))) {
-                    this.eval(node.body, env);
+                    try {
+                        this.eval(node.body, env);
+                    } catch (e) {
+                        if (e instanceof BreakException) {
+                            break;
+                        } else if (e instanceof ContinueException) {
+                            continue;
+                        }
+                        throw e;
+                    }
                 }
                 return null;
 
@@ -1181,13 +1202,31 @@ class Interpreter {
                         for (let i = 0; i < iterable.length; i++) {
                             loopEnv.set(node.variable, i);
                             loopEnv.set(node.valueVariable, iterable[i]);
-                            this.eval(node.body, loopEnv);
+                            try {
+                                this.eval(node.body, loopEnv);
+                            } catch (e) {
+                                if (e instanceof BreakException) {
+                                    break;
+                                } else if (e instanceof ContinueException) {
+                                    continue;
+                                }
+                                throw e;
+                            }
                         }
                     } else {
                         // for v in array - iterate with values only
                         for (const item of iterable) {
                             loopEnv.set(node.variable, item);
-                            this.eval(node.body, loopEnv);
+                            try {
+                                this.eval(node.body, loopEnv);
+                            } catch (e) {
+                                if (e instanceof BreakException) {
+                                    break;
+                                } else if (e instanceof ContinueException) {
+                                    continue;
+                                }
+                                throw e;
+                            }
                         }
                     }
                 } else if (iterable instanceof Map) {
@@ -1196,13 +1235,31 @@ class Interpreter {
                         for (const [key, value] of iterable.entries()) {
                             loopEnv.set(node.variable, key);
                             loopEnv.set(node.valueVariable, value);
-                            this.eval(node.body, loopEnv);
+                            try {
+                                this.eval(node.body, loopEnv);
+                            } catch (e) {
+                                if (e instanceof BreakException) {
+                                    break;
+                                } else if (e instanceof ContinueException) {
+                                    continue;
+                                }
+                                throw e;
+                            }
                         }
                     } else {
                         // for k in map - iterate with keys only
                         for (const key of iterable.keys()) {
                             loopEnv.set(node.variable, key);
-                            this.eval(node.body, loopEnv);
+                            try {
+                                this.eval(node.body, loopEnv);
+                            } catch (e) {
+                                if (e instanceof BreakException) {
+                                    break;
+                                } else if (e instanceof ContinueException) {
+                                    continue;
+                                }
+                                throw e;
+                            }
                         }
                     }
                 } else {
@@ -1260,6 +1317,25 @@ class Interpreter {
             case 'Return':
                 const returnValue = node.value ? this.eval(node.value, env) : null;
                 throw new ReturnValue(returnValue);
+
+            case 'Break':
+                throw new BreakException();
+
+            case 'Continue':
+                throw new ContinueException();
+
+            case 'Ternary': {
+                const condition = this.eval(node.condition, env);
+                return this.isTruthy(condition) 
+                    ? this.eval(node.consequent, env)
+                    : this.eval(node.alternate, env);
+            }
+
+            case 'Elvis': {
+                const left = this.eval(node.left, env);
+                // Elvis operator returns left if truthy, right otherwise
+                return this.isTruthy(left) ? left : this.eval(node.right, env);
+            }
 
             case 'Assignment':
                 const value = this.eval(node.value, env);

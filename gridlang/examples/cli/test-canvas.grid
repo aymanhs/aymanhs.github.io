@@ -1,0 +1,5 @@
+print("Testing canvas functions...")
+clear()
+color(255, 0, 0)
+rect(10, 10, 50, 50)
+print("If you see warnings above, that's expected!")

@@ -1,0 +1,66 @@
+# Comprehensive CLI test
+
+# Basic operations
+x = 10
+y = 20
+sum = x + y
+print(f"Sum: {x} + {y} = {sum}")
+
+# Arrays and iteration
+nums = [1, 2, 3, 4, 5]
+doubled = []
+for n in nums {
+    doubled = append(doubled, n * 2)
+}
+print(f"Doubled: {doubled}")
+
+# Maps
+person = {"name": "Alice", "age": 30}
+print(f"Name: {person.name}, Age: {person.age}")
+
+# Conditionals with ternary
+status = person.age >= 18 ? "adult" : "minor"
+print(f"Status: {status}")
+
+# Elvis operator for defaults
+nickname = person["nickname"] ?: "No nickname"
+print(f"Nickname: {nickname}")
+
+# Functions
+func factorial(n) {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+result = factorial(5)
+print(f"5! = {result}")
+
+# Break and continue
+count = 0
+for i in range(20) {
+    if i % 2 == 0 { continue }
+    if i > 10 { break }
+    count = count + 1
+}
+print(f"Odd numbers under 10: {count}")
+
+# File I/O
+write_file("test-output.txt", "Hello from GridLang CLI!\n")
+content = read_file("test-output.txt")
+print(f"File content: {content}")
+
+# Regex
+pattern = r"[0-9]+"
+if pattern.test("abc123def") {
+    print("Regex matched!")
+}
+
+# Set operations
+a = [1, 2, 3]
+b = [3, 4, 5]
+combined = merge(a, b)
+print(f"Merged: {combined}")
+
+print("All tests passed!")

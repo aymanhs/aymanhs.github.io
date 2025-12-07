@@ -114,6 +114,10 @@ class Parser {
             return this.funcStatement();
         } else if (this.match(TokenType.RETURN)) {
             return this.returnStatement();
+        } else if (this.match(TokenType.BREAK)) {
+            return this.breakStatement();
+        } else if (this.match(TokenType.CONTINUE)) {
+            return this.continueStatement();
         } else if (this.match(TokenType.LBRACE)) {
             return this.blockStatement();
         } else {
@@ -211,6 +215,18 @@ class Parser {
         return { type: 'Return', value, ...loc };
     }
 
+    breakStatement() {
+        const loc = this.loc();
+        this.expect(TokenType.BREAK);
+        return { type: 'Break', ...loc };
+    }
+
+    continueStatement() {
+        const loc = this.loc();
+        this.expect(TokenType.CONTINUE);
+        return { type: 'Continue', ...loc };
+    }
+
     funcExpression() {
         const loc = this.loc();
         this.expect(TokenType.FUNC);
@@ -241,7 +257,7 @@ class Parser {
     }
 
     assignment() {
-        const expr = this.logicalOr();
+        const expr = this.ternary();
         
         // Check for multiple assignment: a, b, c = [1, 2, 3]
         // Only if we see identifier followed by comma AND eventually an =
@@ -343,6 +359,34 @@ class Parser {
         }
         
         return expr;
+    }
+
+    ternary() {
+        let expr = this.elvis();
+        
+        if (this.match(TokenType.QUESTION)) {
+            const loc = this.loc();
+            this.advance();
+            const consequent = this.expression();
+            this.expect(TokenType.COLON);
+            const alternate = this.ternary();
+            return { type: 'Ternary', condition: expr, consequent, alternate, ...loc };
+        }
+        
+        return expr;
+    }
+
+    elvis() {
+        let left = this.logicalOr();
+        
+        while (this.match(TokenType.ELVIS)) {
+            const loc = this.loc();
+            this.advance();
+            const right = this.logicalOr();
+            left = { type: 'Elvis', left, right, ...loc };
+        }
+        
+        return left;
     }
 
     logicalOr() {
