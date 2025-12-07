@@ -1039,7 +1039,11 @@ function updateScriptSelect() {
     Object.keys(savedFiles).forEach(id => {
         const option = document.createElement('option');
         option.value = 'file:' + id;
-        option.textContent = id;
+        
+        // Check if this file is synced to a gist
+        const hasGist = window.gistStorage && gistStorage.getGistIdForFile(id);
+        option.textContent = hasGist ? `☁️ ${id}` : id;
+        
         filesGroup.appendChild(option);
     });
 
@@ -2121,3 +2125,274 @@ if (window.aceEditor) {
 }
 
 // Don't auto-run code on load - user must explicitly run
+
+// ============= GITHUB GIST INTEGRATION =============
+
+// Get UI elements for gist functionality
+const gistConfigModal = document.getElementById('gistConfigModal');
+const gistBrowserModal = document.getElementById('gistBrowserModal');
+const gistConfigBtn = document.getElementById('gistConfigBtn');
+const gistSyncBtn = document.getElementById('gistSyncBtn');
+const gistLoadBtn = document.getElementById('gistLoadBtn');
+const gistStatus = document.getElementById('gistStatus');
+const githubToken = document.getElementById('githubToken');
+const showTokenCheckbox = document.getElementById('showToken');
+const saveGistConfigBtn = document.getElementById('saveGistConfigBtn');
+const testGistConnectionBtn = document.getElementById('testGistConnectionBtn');
+const closeGistConfigBtn = document.getElementById('closeGistConfigBtn');
+const gistList = document.getElementById('gistList');
+const refreshGistListBtn = document.getElementById('refreshGistListBtn');
+const closeGistBrowserBtn = document.getElementById('closeGistBrowserBtn');
+
+// Update gist status indicator
+function updateGistStatus() {
+    if (!window.gistStorage) return;
+    
+    const gistId = gistStorage.getGistIdForFile(currentFileId);
+    if (gistId) {
+        gistStatus.textContent = '☁️ Synced';
+        gistStatus.style.color = '#10b981';
+        gistStatus.title = `Linked to gist: ${gistId}`;
+    } else {
+        gistStatus.textContent = '';
+        gistStatus.title = 'Not synced to GitHub';
+    }
+    
+    // Update the file dropdown to show cloud icon
+    updateScriptSelect();
+}
+
+// Show gist config modal
+gistConfigBtn.addEventListener('click', () => {
+    if (!window.gistStorage) {
+        showToast('Gist storage not available', 'error');
+        return;
+    }
+    
+    githubToken.value = gistStorage.getToken();
+    gistConfigModal.classList.add('show');
+});
+
+// Close gist config modal
+closeGistConfigBtn.addEventListener('click', () => {
+    gistConfigModal.classList.remove('show');
+});
+
+// Toggle token visibility
+showTokenCheckbox.addEventListener('change', (e) => {
+    githubToken.type = e.target.checked ? 'text' : 'password';
+});
+
+// Save GitHub token
+saveGistConfigBtn.addEventListener('click', () => {
+    const token = githubToken.value.trim();
+    if (!token) {
+        showToast('Please enter a valid token', 'error');
+        return;
+    }
+    
+    gistStorage.setToken(token);
+    showToast('GitHub token saved successfully! ✓');
+    gistConfigModal.classList.remove('show');
+});
+
+// Test GitHub connection
+testGistConnectionBtn.addEventListener('click', async () => {
+    const token = githubToken.value.trim();
+    if (!token) {
+        showToast('Please enter a token first', 'error');
+        return;
+    }
+    
+    gistStorage.setToken(token);
+    testGistConnectionBtn.disabled = true;
+    testGistConnectionBtn.textContent = 'Testing...';
+    
+    try {
+        await gistStorage.listGists(1, 1);
+        showToast('Connection successful! ✓');
+    } catch (error) {
+        showToast(`Connection failed: ${error.message}`, 'error');
+    } finally {
+        testGistConnectionBtn.disabled = false;
+        testGistConnectionBtn.textContent = '🔍 Test Connection';
+    }
+});
+
+// Save current file to GitHub Gist
+gistSyncBtn.addEventListener('click', async () => {
+    if (!window.gistStorage) {
+        showToast('Gist storage not available', 'error');
+        return;
+    }
+    
+    if (!gistStorage.hasToken()) {
+        showToast('Please configure your GitHub token first', 'error');
+        gistConfigModal.classList.add('show');
+        return;
+    }
+    
+    const code = editor.value;
+    if (!code || !code.trim()) {
+        showToast('Cannot save empty file', 'error');
+        return;
+    }
+    
+    gistSyncBtn.disabled = true;
+    gistSyncBtn.textContent = '☁️⏳';
+    
+    try {
+        const gistId = gistStorage.getGistIdForFile(currentFileId);
+        const result = await gistStorage.saveFile(currentFileId, code, gistId);
+        
+        // Map this file to the gist
+        gistStorage.mapFileToGist(currentFileId, result.id);
+        
+        updateGistStatus();
+        showToast(`Saved to GitHub Gist! ✓`);
+        
+        // Optionally show the gist URL
+        console.log('Gist URL:', result.url);
+    } catch (error) {
+        showToast(`Failed to save to gist: ${error.message}`, 'error');
+        console.error('Gist save error:', error);
+    } finally {
+        gistSyncBtn.disabled = false;
+        gistSyncBtn.textContent = '☁️↑';
+    }
+});
+
+// Browse and load from GitHub Gists
+gistLoadBtn.addEventListener('click', async () => {
+    if (!window.gistStorage) {
+        showToast('Gist storage not available', 'error');
+        return;
+    }
+    
+    if (!gistStorage.hasToken()) {
+        showToast('Please configure your GitHub token first', 'error');
+        gistConfigModal.classList.add('show');
+        return;
+    }
+    
+    gistBrowserModal.classList.add('show');
+    await loadGistList();
+});
+
+// Close gist browser modal
+closeGistBrowserBtn.addEventListener('click', () => {
+    gistBrowserModal.classList.remove('show');
+});
+
+// Refresh gist list
+refreshGistListBtn.addEventListener('click', async () => {
+    await loadGistList();
+});
+
+// Load and display list of gists
+async function loadGistList() {
+    gistList.innerHTML = '<p style="text-align: center; color: #858585;">Loading...</p>';
+    refreshGistListBtn.disabled = true;
+    
+    try {
+        const gists = await gistStorage.listGists(50, 1);
+        
+        if (gists.length === 0) {
+            gistList.innerHTML = '<p style="text-align: center; color: #858585;">No gists found. Create one by saving a file!</p>';
+            return;
+        }
+        
+        gistList.innerHTML = '';
+        gists.forEach(gist => {
+            const item = document.createElement('div');
+            item.className = 'gist-item';
+            
+            const title = document.createElement('div');
+            title.className = 'gist-item-title';
+            const icon = gist.hasGridFile ? '📄 ' : '📝 ';
+            title.textContent = icon + (gist.description || 'Untitled');
+            
+            const info = document.createElement('div');
+            info.className = 'gist-item-info';
+            const updated = new Date(gist.updated_at).toLocaleString();
+            const fileInfo = gist.filename ? `${gist.filename} • ` : '';
+            info.textContent = `${fileInfo}Updated: ${updated} • ${gist.public ? 'Public' : 'Private'}`;
+            
+            item.appendChild(title);
+            item.appendChild(info);
+            
+            item.addEventListener('click', () => loadGistIntoEditor(gist.id, gist.filename));
+            
+            gistList.appendChild(item);
+        });
+        
+        console.log(`Loaded ${gists.length} gists`);
+    } catch (error) {
+        gistList.innerHTML = `<p style="text-align: center; color: #f48771;">Error: ${error.message}</p>`;
+        showToast(`Failed to load gists: ${error.message}`, 'error');
+    } finally {
+        refreshGistListBtn.disabled = false;
+    }
+}
+
+// Load a specific gist into the editor
+async function loadGistIntoEditor(gistId, filename) {
+    try {
+        const gist = await gistStorage.getGist(gistId);
+        
+        if (!checkUnsavedChanges('Loading a gist')) {
+            return;
+        }
+        
+        // Create or use existing file
+        const localFilename = filename.replace('.grid', '');
+        savedFiles[localFilename] = gist.content;
+        currentFileId = localFilename;
+        
+        // Map to gist
+        gistStorage.mapFileToGist(localFilename, gist.id);
+        
+        // Update editor
+        editor.value = gist.content;
+        if (window.setEditorCode) {
+            window.setEditorCode(gist.content);
+        }
+        
+        lastSavedContent = gist.content;
+        hasUnsavedChanges = false;
+        
+        updateScriptSelect();
+        saveFilesToLocalStorage();
+        updateGistStatus();
+        updateHighlight();
+        updateLineNumbers();
+        
+        gistBrowserModal.classList.remove('show');
+        showToast(`Loaded: ${filename} ✓`);
+    } catch (error) {
+        showToast(`Failed to load gist: ${error.message}`, 'error');
+    }
+}
+
+// Close modals when clicking outside
+gistConfigModal.addEventListener('click', (e) => {
+    if (e.target === gistConfigModal) {
+        gistConfigModal.classList.remove('show');
+    }
+});
+
+gistBrowserModal.addEventListener('click', (e) => {
+    if (e.target === gistBrowserModal) {
+        gistBrowserModal.classList.remove('show');
+    }
+});
+
+// Update gist status when switching files
+const originalSwitchFile = switchFile;
+switchFile = function(fileId) {
+    originalSwitchFile(fileId);
+    updateGistStatus();
+};
+
+// Initialize gist status on load
+updateGistStatus();

@@ -98,6 +98,7 @@
         button.small {
             padding: 6px 12px;
             font-size: 13px;
+            white-space: nowrap;
         }
 
         .toolbar #fileSelect {
@@ -520,6 +521,121 @@
             flex: 1;
         }
 
+        /* Gist modals */
+        .gist-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gist-modal.show {
+            display: flex;
+        }
+
+        .gist-content {
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            padding: 20px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #d4d4d4;
+        }
+
+        .gist-content h2 {
+            margin-bottom: 15px;
+            color: #4ec9b0;
+            font-size: 18px;
+        }
+
+        .gist-content label {
+            display: block;
+            margin: 10px 0 5px;
+            font-size: 14px;
+        }
+
+        .gist-content input[type="text"],
+        .gist-content input[type="password"] {
+            width: 100%;
+            background: #3c3c3c;
+            border: 1px solid #3e3e42;
+            padding: 8px;
+            color: #d4d4d4;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+        }
+
+        .gist-content input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .gist-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .gist-buttons button {
+            flex: 1;
+        }
+
+        .gist-list {
+            margin: 15px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .gist-item {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .gist-item:hover {
+            background: #252526;
+            border-color: #007acc;
+        }
+
+        .gist-item-title {
+            font-weight: bold;
+            color: #4ec9b0;
+            margin-bottom: 5px;
+        }
+
+        .gist-item-info {
+            font-size: 11px;
+            color: #858585;
+        }
+
+        .gist-sync-status {
+            display: inline-block;
+            margin-left: 5px;
+            padding: 2px 6px;
+            font-size: 10px;
+            border-radius: 3px;
+            background: #10b981;
+            color: white;
+        }
+
+        .gist-sync-status.not-synced {
+            background: #6c6c6c;
+        }
+
         .help-search {
             padding: 15px 20px;
             border-bottom: 1px solid #3e3e42;
@@ -709,16 +825,21 @@
                 </select>
                 <span id="dirtyIndicator" style="color: #10b981; font-weight: bold; margin-left: 5px;" title="All changes saved">●</span>
                 <button id="saveFileBtn" class="small" title="Save current file">💾</button>
-                <button id="saveAsBtn" class="small" title="Save as new file">💾+</button>
+                <button id="saveAsBtn" class="small" title="Save as new file">📑</button>
                 <button id="renameFileBtn" class="small" title="Rename file">✏️</button>
                 <button id="deleteFileBtn" class="small" title="Delete file">🗑️</button>
                 <button id="shareBtn" class="small" title="Share Code (Generate URL)">🔗</button>
                 <span style="margin: 0 10px; border-left: 1px solid #3e3e42;"></span>
-                <button id="runBtn" title="Run (Ctrl+Enter)">▶</button>
-                <button id="clearBtn" class="clear" title="Clear Canvas">🗑</button>
-                <button id="statsBtn" class="clear" title="Toggle Stats">📊</button>
-                <button id="helpBtn" title="Help">❓</button>
-                <button id="debugBtn" class="clear" title="Toggle Debug Mode" style="position: relative;">
+                <button id="gistSyncBtn" class="small" title="Save to GitHub Gist">☁️↑</button>
+                <button id="gistLoadBtn" class="small" title="Browse GitHub Gists">☁️↓</button>
+                <button id="gistConfigBtn" class="small" title="Configure GitHub Token">⚙️</button>
+                <span id="gistStatus" style="font-size: 11px; color: #858585; margin-left: 5px;" title="Gist sync status"></span>
+                <span style="margin: 0 10px; border-left: 1px solid #3e3e42;"></span>
+                <button id="runBtn" class="small" title="Run (Ctrl+Enter)">▶</button>
+                <button id="clearBtn" class="clear small" title="Clear Canvas">🗑</button>
+                <button id="statsBtn" class="clear small" title="Toggle Stats">📊</button>
+                <button id="helpBtn" class="small" title="Help">❓</button>
+                <button id="debugBtn" class="clear small" title="Toggle Debug Mode" style="position: relative;">
                     🐛
                     <input type="checkbox" id="debugCheckbox" style="position: absolute; opacity: 0; pointer-events: none;">
                 </button>
@@ -797,6 +918,60 @@ print("Pattern complete!")</textarea>
         </div>
     </div>
 
+    <!-- GitHub Gist Config Modal -->
+    <div id="gistConfigModal" class="gist-modal">
+        <div class="gist-content">
+            <h2>⚙️ GitHub Gist Configuration</h2>
+            <p style="margin-bottom: 15px; font-size: 13px; color: #858585;">
+                To use GitHub Gists for storing your GridLang code, you need a GitHub Personal Access Token.
+            </p>
+            
+            <label for="githubToken">GitHub Personal Access Token:</label>
+            <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+            
+            <p style="margin: 10px 0; font-size: 12px; color: #858585;">
+                Don't have a token? 
+                <a href="https://github.com/settings/tokens/new?scopes=gist&description=GridLang" 
+                   target="_blank" 
+                   style="color: #4ec9b0; text-decoration: none;">
+                    Create one here
+                </a>
+                <br>
+                <small>Required scope: <code style="background: #1e1e1e; padding: 2px 4px;">gist</code></small>
+            </p>
+
+            <label>
+                <input type="checkbox" id="showToken" style="width: auto; display: inline; margin-right: 5px;">
+                Show token
+            </label>
+
+            <div class="gist-buttons">
+                <button id="saveGistConfigBtn">💾 Save</button>
+                <button id="testGistConnectionBtn" class="clear">🔍 Test Connection</button>
+                <button id="closeGistConfigBtn" class="clear">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Gist Browser Modal -->
+    <div id="gistBrowserModal" class="gist-modal">
+        <div class="gist-content">
+            <h2>📚 Your GitHub Gists</h2>
+            <p style="margin-bottom: 10px; font-size: 13px; color: #858585;">
+                Select a gist to load into the editor:
+            </p>
+            
+            <div id="gistList" class="gist-list">
+                <p style="text-align: center; color: #858585;">Loading...</p>
+            </div>
+
+            <div class="gist-buttons">
+                <button id="refreshGistListBtn">🔄 Refresh</button>
+                <button id="closeGistBrowserBtn" class="clear">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script>
@@ -837,12 +1012,13 @@ print("Pattern complete!")</textarea>
     <script src="parser.js" id="script-parser"></script>
     <script src="renderer3d.js" id="script-renderer"></script>
     <script src="gridlang.js" id="script-gridlang"></script>
+    <script src="gist-storage.js" id="script-gist"></script>
     <script src="gridlang-ace-mode.js" id="script-ace-mode"></script>
     <script src="ace-init.js" id="script-ace"></script>
     <script src="ui.js" id="script-ui"></script>
     <script>
         // Apply cache-busting to local asset scripts
-        ['script-lexer','script-parser','script-renderer','script-gridlang','script-ace-mode','script-ace','script-ui'].forEach(id => {
+        ['script-lexer','script-parser','script-renderer','script-gridlang','script-gist','script-ace-mode','script-ace','script-ui'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.src = withVersion(el.getAttribute('src'));
         });
