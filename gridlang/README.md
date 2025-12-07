@@ -188,7 +188,7 @@ print(grid.width)   # 3
 print(grid.height)  # 3
 print(grid.diags)   # false (default: 4-directional)
 
-# Get and set values
+# Get and set values (x, y)
 val = grid.get(1, 1)  # Get value at (1, 1)
 grid.set(0, 0, "X")   # Set value at (0, 0)
 
