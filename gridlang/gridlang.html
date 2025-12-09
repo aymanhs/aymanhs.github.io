@@ -1010,6 +1010,8 @@ print("Pattern complete!")</textarea>
     </script>
     <script src="lexer.js" id="script-lexer"></script>
     <script src="parser.js" id="script-parser"></script>
+    <script src="bytecode.js" id="script-bytecode"></script>
+    <script src="vm.js" id="script-vm"></script>
     <script src="renderer3d.js" id="script-renderer"></script>
     <script src="gridlang.js" id="script-gridlang"></script>
     <script src="gist-storage.js" id="script-gist"></script>
@@ -1018,7 +1020,7 @@ print("Pattern complete!")</textarea>
     <script src="ui.js" id="script-ui"></script>
     <script>
         // Apply cache-busting to local asset scripts
-        ['script-lexer','script-parser','script-renderer','script-gridlang','script-gist','script-ace-mode','script-ace','script-ui'].forEach(id => {
+        ['script-lexer','script-parser','script-bytecode','script-vm','script-renderer','script-gridlang','script-gist','script-ace-mode','script-ace','script-ui'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.src = withVersion(el.getAttribute('src'));
         });
