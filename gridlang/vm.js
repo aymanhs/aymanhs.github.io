@@ -1,9 +1,12 @@
 // GridLang Virtual Machine
 // Stack-based VM for executing bytecode
 
+// Wrap in IIFE for browser to avoid global scope pollution
+(function() {
+
 // Import dependencies based on environment
-let OpCode, GridLangError, GridObject;
-if (typeof require !== 'undefined') {
+var OpCode, GridLangError, GridObject;
+if (typeof module !== 'undefined' && module.exports) {
     // Node.js environment
     const bytecode = require('./bytecode.js');
     OpCode = bytecode.OpCode;
@@ -24,7 +27,7 @@ if (typeof require !== 'undefined') {
         }
         GridLangError = GridLangErrorLocal;
     }
-} else if (typeof window !== 'undefined') {
+} else {
     // Browser environment - use globals
     OpCode = window.OpCode;
     GridLangError = window.GridLangError;
@@ -1637,3 +1640,5 @@ if (typeof module !== 'undefined' && module.exports) {
     // Browser: expose globally
     window.VM = VM;
 }
+
+})();

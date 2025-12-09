@@ -1,9 +1,12 @@
 // GridLang Bytecode Compiler and VM
 // Compiles AST to bytecode and executes via stack-based virtual machine
 
+// Wrap in IIFE for browser to avoid global scope pollution
+(function() {
+
 // Import Regex class based on environment
-let Regex;
-if (typeof require !== 'undefined') {
+var Regex;
+if (typeof module !== 'undefined' && module.exports) {
     // Node.js environment
     try {
         const gridlang = require('./gridlang.js');
@@ -11,7 +14,7 @@ if (typeof require !== 'undefined') {
     } catch (e) {
         // Regex not available
     }
-} else if (typeof window !== 'undefined') {
+} else {
     // Browser environment - use global
     Regex = window.Regex;
 }
@@ -814,3 +817,5 @@ if (typeof module !== 'undefined' && module.exports) {
     window.OpCode = OpCode;
     window.OpName = OpName;
 }
+
+})();
