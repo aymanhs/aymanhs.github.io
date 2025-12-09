@@ -1805,6 +1805,6 @@ class Interpreter {
 
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Interpreter, GridLangError };
+    module.exports = { Interpreter, GridLangError, Regex, GridObject };
 }
 
