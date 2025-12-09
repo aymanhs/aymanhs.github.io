@@ -1806,5 +1806,11 @@ class Interpreter {
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Interpreter, GridLangError, Regex, GridObject };
+} else if (typeof window !== 'undefined') {
+    // Browser: expose globally
+    window.Interpreter = Interpreter;
+    window.GridLangError = GridLangError;
+    window.Regex = Regex;
+    window.GridObject = GridObject;
 }
 

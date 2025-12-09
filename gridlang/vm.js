@@ -1,9 +1,10 @@
 // GridLang Virtual Machine
 // Stack-based VM for executing bytecode
 
-// Import OpCode if in Node.js environment
+// Import dependencies based on environment
 let OpCode, GridLangError, GridObject;
 if (typeof require !== 'undefined') {
+    // Node.js environment
     const bytecode = require('./bytecode.js');
     OpCode = bytecode.OpCode;
     try {
@@ -23,6 +24,11 @@ if (typeof require !== 'undefined') {
         }
         GridLangError = GridLangErrorLocal;
     }
+} else if (typeof window !== 'undefined') {
+    // Browser environment - use globals
+    OpCode = window.OpCode;
+    GridLangError = window.GridLangError;
+    GridObject = window.GridObject;
 }
 
 // ChainedMap - a Map with a parent for fallback lookup (lexical scoping)
@@ -1627,4 +1633,7 @@ class VM {
 // Export
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { VM };
+} else if (typeof window !== 'undefined') {
+    // Browser: expose globally
+    window.VM = VM;
 }

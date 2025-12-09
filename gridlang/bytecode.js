@@ -1,8 +1,20 @@
 // GridLang Bytecode Compiler and VM
 // Compiles AST to bytecode and executes via stack-based virtual machine
 
-// Import Regex class for regex literal support
-const { Regex } = require('./gridlang.js');
+// Import Regex class based on environment
+let Regex;
+if (typeof require !== 'undefined') {
+    // Node.js environment
+    try {
+        const gridlang = require('./gridlang.js');
+        Regex = gridlang.Regex;
+    } catch (e) {
+        // Regex not available
+    }
+} else if (typeof window !== 'undefined') {
+    // Browser environment - use global
+    Regex = window.Regex;
+}
 
 // ============= OPCODES =============
 const OpCode = {
@@ -795,4 +807,10 @@ class Compiler {
 // Export
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Compiler, BytecodeChunk, OpCode, OpName };
+} else if (typeof window !== 'undefined') {
+    // Browser: expose globally
+    window.Compiler = Compiler;
+    window.BytecodeChunk = BytecodeChunk;
+    window.OpCode = OpCode;
+    window.OpName = OpName;
 }
