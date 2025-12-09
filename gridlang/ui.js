@@ -1825,7 +1825,13 @@ function runCode() {
         const ast = parser.parse();
 
         const currentInput = inputs[currentInputId] || '';
-        currentInterpreter = new Interpreter(canvas, canvas3d, consoleEl, renderer3d, currentInput, canvasContainer, inputs);
+        
+        // Compile AST to bytecode
+        const compiler = new Compiler();
+        const chunk = compiler.compile(ast);
+        
+        // Use VM instead of Interpreter
+        currentInterpreter = new VM(canvas, canvas3d, consoleEl, renderer3d, currentInput, canvasContainer, inputs);
 
         // Set debug mode from checkbox
         currentInterpreter.debugEnabled = debugCheckbox.checked;
@@ -1833,7 +1839,7 @@ function runCode() {
         // Clear any previous error highlighting
         clearErrorHighlight();
 
-        currentInterpreter.run(ast);
+        currentInterpreter.run(chunk);
 
         // Transform run button to stop button if animation is running
         if (currentInterpreter.animationRunning) {
