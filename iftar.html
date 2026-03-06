@@ -207,6 +207,27 @@
             background: var(--panel-border);
             margin: clamp(15px, 4vw, 25px) 0;
         }
+
+        @media screen and (orientation: portrait) {
+            #Time {
+                font-size: clamp(4.5rem, 24vw, 15rem);
+                margin-top: -10px;
+                margin-bottom: 0;
+            }
+
+            .glass-panel {
+                padding: 4vw;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr !important;
+                font-size: clamp(1.2rem, 4.5vw, 2rem) !important;
+            }
+
+            .info-card {
+                padding: 20px;
+            }
+        }
     </style>
     <script type="text/javascript" charset="utf-8">
         function msToHHMMSS(ms) {
@@ -262,9 +283,17 @@
                 iftarOffset = parseInt(searchParams.get('o'));
             }
 
-            var latitude = 26.22;
-            var longitude = 50.54;
+            var latitude = parseFloat(localStorage.getItem('latitude')) || 26.22;
+            var longitude = parseFloat(localStorage.getItem('longitude')) || 50.54;
             var timerInterval = null;
+
+            window.refreshLocation = function () {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
+                } else {
+                    alert("Geolocation is not supported by this browser.");
+                }
+            };
 
             function startTimer() {
                 if (timerInterval) clearInterval(timerInterval);
@@ -370,34 +399,34 @@
                         targetTime = todayImsak;
                         startTime = yesterdayIftar;
                         endTime = todayImsak;
-                        stateMsg = isRamadan ? "Eating Window ends at " + targetTime.format("hh:mm am") : "Fajr at " + targetTime.format("hh:mm am");
-                        $("#fastStart").html("Maghrib: " + startTime.format("hh:mm a"));
-                        $("#fastEnd").html("Imsak: " + endTime.format("hh:mm a"));
+                        stateMsg = isRamadan ? "Eating Window ends at " + targetTime.format("hh:mm") : "Fajr at " + targetTime.format("hh:mm");
+                        $("#fastStart").html("Maghrib: " + startTime.format("hh:mm"));
+                        $("#fastEnd").html("Imsak: " + endTime.format("hh:mm"));
                     } else if (now >= todayImsak && now < todayIftar) {
                         // Fasting Period -> Countdown to today's Iftar
                         targetTime = todayIftar;
                         startTime = todayImsak;
                         endTime = todayIftar;
-                        stateMsg = (isRamadan ? "Iftar at " : "Sunset at ") + targetTime.format("hh:mm pm");
-                        $("#fastStart").html("Imsak: " + startTime.format("hh:mm a"));
-                        $("#fastEnd").html("Iftar: " + endTime.format("hh:mm a"));
+                        stateMsg = (isRamadan ? "Iftar at " : "Sunset at ") + targetTime.format("hh:mm");
+                        $("#fastStart").html("Imsak: " + startTime.format("hh:mm"));
+                        $("#fastEnd").html("Iftar: " + endTime.format("hh:mm"));
                     } else if (now >= todayIftar && now < new Date(todayIftar.getTime() + 2 * 60 * 60 * 1000)) {
                         // Up to 2 hours after Iftar -> Show time SINCE Iftar (Count UP)
                         targetTime = todayIftar;
                         startTime = todayImsak;
                         endTime = todayIftar;
-                        stateMsg = isRamadan ? "Iftar passed at " + targetTime.format("hh:mm pm") : "Sunset passed at " + targetTime.format("hh:mm pm");
+                        stateMsg = isRamadan ? "Iftar passed at " + targetTime.format("hh:mm") : "Sunset passed at " + targetTime.format("hh:mm");
                         isOvertime = true;
-                        $("#fastStart").html("Imsak: " + startTime.format("hh:mm a"));
-                        $("#fastEnd").html("Iftar: " + endTime.format("hh:mm a"));
+                        $("#fastStart").html("Imsak: " + startTime.format("hh:mm"));
+                        $("#fastEnd").html("Iftar: " + endTime.format("hh:mm"));
                     } else {
                         // More than 2 hours after Iftar -> Countdown to TOMORROW'S Imsak
                         targetTime = tomorrowImsak;
                         startTime = todayIftar;
                         endTime = tomorrowImsak;
-                        stateMsg = isRamadan ? "Next Imsak at " + targetTime.format("hh:mm am") : "Next Fajr at " + targetTime.format("hh:mm am");
-                        $("#fastStart").html("Maghrib: " + startTime.format("hh:mm a"));
-                        $("#fastEnd").html("Imsak: " + endTime.format("hh:mm a"));
+                        stateMsg = isRamadan ? "Next Imsak at " + targetTime.format("hh:mm") : "Next Fajr at " + targetTime.format("hh:mm");
+                        $("#fastStart").html("Maghrib: " + startTime.format("hh:mm"));
+                        $("#fastEnd").html("Imsak: " + endTime.format("hh:mm"));
                     }
 
                     // Calculate Time Display
@@ -438,6 +467,8 @@
             function geoSuccess(position) {
                 latitude = position.coords.latitude;
                 longitude = position.coords.longitude;
+                localStorage.setItem('latitude', latitude);
+                localStorage.setItem('longitude', longitude);
                 startTimer();
             }
 
@@ -446,10 +477,12 @@
                 startTimer();
             }
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
-            } else {
-                geoError();
+            // Initialization: Start with cached/default values immediately
+            startTimer();
+
+            // Optionally update in background IF no cached values existed
+            if (!localStorage.getItem('latitude')) {
+                refreshLocation();
             }
         });
     </script>
@@ -501,13 +534,16 @@
             <a href="?o=15" class="btn">+15</a>
         </div>
 
-        <div style="margin-top: 15px;">
+        <div style="margin-top: 30px;">
             <a href="chart.html" class="btn" style="background: rgba(255, 215, 0, 0.2); border-color: gold;">View Yearly
                 Chart</a>
         </div>
 
         <hr>
-        <div style="font-size: 0.9em; opacity: 0.8;">By Ayman Al-Sairafi &middot; Location Auto-Detected</div>
+        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 10px;">By Ayman Al-Sairafi &middot; Location
+            Auto-Detected</div>
+        <button onclick="refreshLocation()" class="btn"
+            style="font-size: 0.8em; padding: 5px 10px; opacity: 0.7;">Refresh Location</button>
     </div>
 </body>
 
