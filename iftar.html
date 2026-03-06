@@ -8,28 +8,251 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
     <link href='https://fonts.googleapis.com/css?family=Play' rel='stylesheet' type='text/css'>
     <style>
-        a {
+        :root {
+            --bg-color-top: #87CEEB;
+            /* Default Daytime Sky */
+            --bg-color-bottom: #f0f8ff;
+            --panel-bg: rgba(0, 0, 0, 0.4);
+            /* Darker for contrast */
+            --panel-border: rgba(255, 255, 255, 0.2);
+            --text-color: #fff;
+            --text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8);
+            /* Stronger shadow */
+            --accent-color: #ffd700;
+        }
+
+        body {
+            font-family: 'Play', sans-serif;
+            margin: 0;
+            padding: 2vh 3vw;
+            /* Less padding on small screens */
+            min-height: 100vh;
+            color: var(--text-color);
+            text-align: center;
+            background: linear-gradient(to bottom, var(--bg-color-top), var(--bg-color-bottom));
+            transition: background 2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            /* Tighter gap */
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
+            padding: 5vw;
+            /* Responsive padding */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+
+        #Time {
+            font-size: clamp(3.5rem, 18vw, 10rem);
+            /* Wider range for mobile */
+            font-weight: bold;
+            text-shadow: var(--text-shadow);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .date-row {
+            font-size: clamp(1.2rem, 5vw, 2.5rem);
+            display: flex;
+            flex-direction: column;
+            /* Stack dates on mobile */
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            text-shadow: var(--text-shadow);
+            margin-bottom: 10px;
+        }
+
+        .hijri-flex {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .greg-date {
+            font-size: clamp(1rem, 4vw, 1.8rem);
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* Modern Progress Bar */
+        .progress-container {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            /* Lighter track */
+            border-radius: 20px;
+            overflow: hidden;
+            height: clamp(15px, 4vw, 25px);
+            /* Responsive height */
+            margin: 15px 0;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        #progBar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            width: 0%;
+            transition: width 1s linear;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(255, 154, 158, 0.8);
+        }
+
+        .times-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: clamp(1rem, 3.5vw, 1.5rem);
+            text-shadow: var(--text-shadow);
+            margin-bottom: 5px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            /* Single column on mobile by default */
+            gap: 15px;
+            margin-top: 20px;
+            font-size: clamp(1rem, 3.5vw, 1.3rem);
+            text-align: left;
+        }
+
+        @media (min-width: 600px) {
+            .info-grid {
+                grid-template-columns: repeat(2, 1fr);
+                /* Two columns on larger screens */
+            }
+
+            .date-row {
+                flex-direction: row;
+                /* Side-by-side on desktop */
+            }
+        }
+
+        .info-card {
+            background: rgba(0, 0, 0, 0.3);
+            /* Darker card bg */
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .info-card strong {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--accent-color);
+        }
+
+        /* Buttons & Links */
+        button,
+        a.btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--panel-border);
+            color: white;
+            padding: clamp(6px, 2vw, 10px) clamp(10px, 3vw, 20px);
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Play', sans-serif;
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
             text-decoration: none;
-            color: black;
-            font-size: 2vw;
-            padding: 10px;
-            background-color: lightslategray;
-            box-shadow: black 5px 5px 10px;
-            width: 90px;
-            border: black 1px solid;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover,
+        a.btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .offset-controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            /* Wraps cleanly on mobile */
+        }
+
+        .offset-controls span {
+            width: 100%;
+            /* Forces text to its own line on very small screens if wrapped */
+        }
+
+        @media (min-width: 480px) {
+            .offset-controls span {
+                width: auto;
+            }
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background: var(--panel-border);
+            margin: clamp(15px, 4vw, 25px) 0;
         }
     </style>
     <script type="text/javascript" charset="utf-8">
         function msToHHMMSS(ms) {
             var secs = ms / 1000;
-            var h = Math.floor(secs/3600);
-            var m = Math.floor((secs - h*3600)/60);
-            var s = Math.floor(secs - (h*3600) - (m*60));
+            var h = Math.floor(secs / 3600);
+            var m = Math.floor((secs - h * 3600) / 60);
+            var s = Math.floor(secs - (h * 3600) - (m * 60));
 
-            if(m<10) {m="0"+m;}
-            if(s<10) {s="0"+s;}
+            if (m < 10) { m = "0" + m; }
+            if (s < 10) { s = "0" + s; }
 
             return "" + h + ":" + m + ":" + s;
+        }
+
+        function getHijriDate(date, offsetDays) {
+            var adjustedDate = new Date(date.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+            var hijriFormat = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
+                month: 'numeric',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            var parts = hijriFormat.formatToParts(adjustedDate);
+            var day = parts.find(p => p.type === 'day').value;
+            var month = parts.find(p => p.type === 'month').value;
+            var year = parts.find(p => p.type === 'relatedYear' || p.type === 'year')?.value || '';
+            return { day: parseInt(day), month: parseInt(month), year: year };
+        }
+
+        var hijriOffset = parseInt(localStorage.getItem('hijriOffset')) || 0;
+
+        function updateHijriDisplay() {
+            var hijri = getHijriDate(new Date(), hijriOffset);
+            var displayStr = "";
+            if (hijri.month === 9) {
+                displayStr = "Ramadhan " + hijri.day;
+            } else {
+                var months = ["Muharram", "Safar", "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Awwal", "Jumada al-Thani", "Rajab", "Sha'ban", "Ramadhan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"];
+                displayStr = hijri.day + " " + months[hijri.month - 1];
+            }
+            $("#HijriDate").html(displayStr);
+        }
+
+        function changeHijriOffset(delta) {
+            hijriOffset += delta;
+            localStorage.setItem('hijriOffset', hijriOffset);
+            updateHijriDisplay();
         }
 
         $(document).ready(function () {
@@ -38,81 +261,254 @@
             if (searchParams.has('o')) {
                 iftarOffset = parseInt(searchParams.get('o'));
             }
-            // navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
-            var suntimes = SunCalc.getTimes(new Date(), 26.22, 50.54);
-            var iftarTime = suntimes.sunset;
-            iftarTime = new Date(iftarTime.getTime() + iftarOffset * 60 * 1000);
-            var fastingStartTime = suntimes.nightEnd;
-            var dom = Math.ceil((new Date().getTime() - new Date("02/18/2026").getTime()) / (1000 * 3600 * 24))
-            if(dom<1) {
-                dom --;
+
+            var latitude = 26.22;
+            var longitude = 50.54;
+            var timerInterval = null;
+
+            function startTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+
+                updateHijriDisplay();
+
+                var tdiv = $("#Time");
+                var sunpos = $("#SunPos");
+                var iftarLabel = $("#Iftar");
+                var progBar = $("#progBar");
+                var fastPct = $("#fastPct");
+
+                var currentHijri = getHijriDate(new Date(), hijriOffset);
+                var isRamadan = currentHijri.month === 9;
+
+                function updateDates() {
+                    var now = new Date();
+                    var gregOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                    $("#GregDate").html(now.toLocaleDateString('en-US', gregOptions));
+                }
+                updateDates();
+
+                function updateBackground() {
+                    var now = new Date();
+                    var times = SunCalc.getTimes(now, latitude, longitude);
+
+                    var root = document.documentElement;
+                    var hour = now.getHours() + now.getMinutes() / 60;
+
+                    if (now > times.sunriseEnd && now < times.sunsetStart) {
+                        root.style.setProperty('--bg-color-top', '#87CEEB');
+                        root.style.setProperty('--bg-color-bottom', '#e0f6ff');
+                        root.style.setProperty('--text-color', '#fff');
+                        root.style.setProperty('--text-shadow', '2px 2px 8px rgba(0,0,102,0.6)');
+                    } else if (now >= times.sunsetStart && now <= times.dusk) {
+                        root.style.setProperty('--bg-color-top', '#ff7e5f');
+                        root.style.setProperty('--bg-color-bottom', '#feb47b');
+                        root.style.setProperty('--text-color', '#fff');
+                        root.style.setProperty('--text-shadow', '2px 2px 8px rgba(102,0,0,0.6)');
+                    } else if (now >= times.dawn && now <= times.sunriseEnd) {
+                        root.style.setProperty('--bg-color-top', '#ff9966');
+                        root.style.setProperty('--bg-color-bottom', '#ffb347');
+                        root.style.setProperty('--text-color', '#fff');
+                        root.style.setProperty('--text-shadow', '2px 2px 8px rgba(102,0,0,0.6)');
+                    } else {
+                        root.style.setProperty('--bg-color-top', '#0f2027');
+                        root.style.setProperty('--bg-color-bottom', '#2c5364');
+                        root.style.setProperty('--text-color', '#fff');
+                        root.style.setProperty('--text-shadow', '2px 2px 8px rgba(0,0,0,0.8)');
+                    }
+                }
+
+                updateBackground();
+
+                var currentDateObj = null; // Track day rollover
+
+                timerInterval = window.setInterval(function () {
+                    var now = new Date();
+                    updateBackground();
+
+                    // Detect day rollover
+                    if (!currentDateObj || now.getDate() !== currentDateObj.getDate()) {
+                        currentDateObj = new Date(now);
+                        updateHijriDisplay();
+                        updateDates();
+                        currentHijri = getHijriDate(now, hijriOffset);
+                        isRamadan = currentHijri.month === 9;
+                    }
+
+                    // Calculate times for TODAY
+                    var todayTimes = SunCalc.getTimes(now, latitude, longitude);
+                    var todayImsak = todayTimes.nightEnd;
+                    var todayIftar = new Date(todayTimes.sunset.getTime() + iftarOffset * 60 * 1000);
+
+                    // Calculate times for YESTERDAY
+                    var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    var yesterdayTimes = SunCalc.getTimes(yesterday, latitude, longitude);
+                    var yesterdayIftar = new Date(yesterdayTimes.sunset.getTime() + iftarOffset * 60 * 1000);
+
+                    // Calculate times for TOMORROW
+                    var tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                    var tomorrowTimes = SunCalc.getTimes(tomorrow, latitude, longitude);
+                    var tomorrowImsak = tomorrowTimes.nightEnd;
+
+                    // Update generic Sun Times box
+                    const sep = window.innerWidth < window.innerHeight ? "<br>" : ", ";
+                    $("#SunTimes").html(String.format(`Fajr/Imsak: %s${sep}Sunrise: %s${sep}Noon: %s${sep}Sunset/Iftar: %s`,
+                        todayImsak.format("hh:mm:ss"),
+                        todayTimes.sunrise.format("hh:mm:ss"),
+                        todayTimes.solarNoon.format("hh:mm:ss"),
+                        todayIftar.format("HH:mm:ss")
+                    ));
+
+                    sunpos.html(String.format("Time now %s<br>Sun altitude = %5.2f&deg;",
+                        now.format("hh:mm:ss"),
+                        SunCalc.getPosition(now, latitude, longitude).altitude * 57.2957795131));
+
+                    var targetTime, startTime, endTime, progress, timeDiff, stateMsg, isOvertime = false;
+
+                    // STATE MACHINE
+                    if (now < todayImsak) {
+                        // After midnight, before today's Imsak -> Countdown to today's Imsak
+                        targetTime = todayImsak;
+                        startTime = yesterdayIftar;
+                        endTime = todayImsak;
+                        stateMsg = isRamadan ? "Eating Window ends at " + targetTime.format("hh:mm am") : "Fajr at " + targetTime.format("hh:mm am");
+                        $("#fastStart").html("Maghrib: " + startTime.format("hh:mm a"));
+                        $("#fastEnd").html("Imsak: " + endTime.format("hh:mm a"));
+                    } else if (now >= todayImsak && now < todayIftar) {
+                        // Fasting Period -> Countdown to today's Iftar
+                        targetTime = todayIftar;
+                        startTime = todayImsak;
+                        endTime = todayIftar;
+                        stateMsg = (isRamadan ? "Iftar at " : "Sunset at ") + targetTime.format("hh:mm pm");
+                        $("#fastStart").html("Imsak: " + startTime.format("hh:mm a"));
+                        $("#fastEnd").html("Iftar: " + endTime.format("hh:mm a"));
+                    } else if (now >= todayIftar && now < new Date(todayIftar.getTime() + 2 * 60 * 60 * 1000)) {
+                        // Up to 2 hours after Iftar -> Show time SINCE Iftar (Count UP)
+                        targetTime = todayIftar;
+                        startTime = todayImsak;
+                        endTime = todayIftar;
+                        stateMsg = isRamadan ? "Iftar passed at " + targetTime.format("hh:mm pm") : "Sunset passed at " + targetTime.format("hh:mm pm");
+                        isOvertime = true;
+                        $("#fastStart").html("Imsak: " + startTime.format("hh:mm a"));
+                        $("#fastEnd").html("Iftar: " + endTime.format("hh:mm a"));
+                    } else {
+                        // More than 2 hours after Iftar -> Countdown to TOMORROW'S Imsak
+                        targetTime = tomorrowImsak;
+                        startTime = todayIftar;
+                        endTime = tomorrowImsak;
+                        stateMsg = isRamadan ? "Next Imsak at " + targetTime.format("hh:mm am") : "Next Fajr at " + targetTime.format("hh:mm am");
+                        $("#fastStart").html("Maghrib: " + startTime.format("hh:mm a"));
+                        $("#fastEnd").html("Imsak: " + endTime.format("hh:mm a"));
+                    }
+
+                    // Calculate Time Display
+                    if (isOvertime) {
+                        timeDiff = now.getTime() - targetTime.getTime();
+                        tdiv.html("+" + msToHHMMSS(timeDiff));
+                        tdiv.css('color', '#ff9a9e'); // Indicate overtime visually
+                    } else {
+                        timeDiff = targetTime.getTime() - now.getTime();
+                        tdiv.html(msToHHMMSS(timeDiff));
+                        tdiv.css('color', '#fff');
+                    }
+
+                    iftarLabel.html(stateMsg);
+
+                    // Calculate Progress
+                    var totalDuration = endTime.getTime() - startTime.getTime();
+                    var currDuration = now.getTime() - startTime.getTime();
+                    progress = (currDuration / totalDuration) * 100;
+
+                    if (progress > 100) progress = 100;
+                    if (progress < 0) progress = 0;
+
+                    fastPct.html(String.format("%6.2f%%", progress));
+
+                    // Visual bar updates
+                    progBar.width(progress + "%");
+                    if (progress >= 100) {
+                        progBar.css('background', 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)');
+                    } else {
+                        // Default gradient mapping
+                        progBar.css('background', 'linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)');
+                    }
+
+                }, 1000);
             }
-            $("#Iftar").html("Ramadhan " + dom +  ", Iftar at " + iftarTime.format("hh:mm"));
-            var tdiv = $("#Time");
-            var sunpos = $("#SunPos");
-            const sep = window.innerWidth < window.innerHeight ? "<br>" : ", ";
-            $("#SunTimes").html(String.format(`Fajr: %s${sep}Sunrise: %s${sep}Noon: %s${sep}Sunset: %s${sep}Fasting for: %s`,
-                suntimes.nightEnd.format("hh:mm:ss"),
-                suntimes.sunrise.format("hh:mm:ss"),
-                suntimes.solarNoon.format("hh:mm:ss"),
-                suntimes.sunset.format("HH:mm:ss"),
-                msToHHMMSS(iftarTime - suntimes.nightEnd)
-            ));
-            $("#fastStart").html("Start: " + suntimes.nightEnd.format("hh:mm:ss"));
-            $("#fastEnd").html("End: " + iftarTime.format("hh:mm:ss"));
 
-            var totalDuration = iftarTime - fastingStartTime;
+            function geoSuccess(position) {
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+                startTimer();
+            }
 
-            window.setInterval(function () {
-                var now = new Date();
-                var delta = iftarTime.getTime() - now.getTime();
-                if(now > iftarTime) {
-                    delta = now.getTime() - iftarTime.getTime();
-                }
-                tdiv.html(msToHHMMSS(delta));
-                sunpos.html(String.format("Time now %s<br>Sun altitude = %5.2f",
-                    now.format("hh:mm:ss"),
-                    SunCalc.getPosition(now, 26.22, 50.54).altitude * 57.2957795131));
-                var currDuration = now - fastingStartTime;
-                var progress = (currDuration/totalDuration) * 100;
-                if(progress > 100) {
-                    progress = 100;
-                }
-                $("#fastPct").html(String.format("Progress: %6.2f%%", progress));
-                $("#progBar").width(String.format("%6.2f%%", progress));
-            }, 1000);
-        })
+            function geoError() {
+                console.log("Geolocation failed or denied, using default coordinates.");
+                startTimer();
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
+            } else {
+                geoError();
+            }
+        });
     </script>
 </head>
 
-<body style="font-family: 'Play', sans-serif; background: linear-gradient(SkyBlue, white);" align="center">
-    <div id="Time" style="font-size: 20vw;  text-shadow: 5px 5px 10px #000066;color: #fff"></div>
-    <div id="Iftar" style="font-size: 3vw;"></div>
-    <hr/>
-    <table style="width: 100%; font-size: 2vw;">
-        <tr>
-            <td style="width: 20%; text-align: left;" id="fastStart">Start</td>
-            <td id="fastPct">Progress</td>
-            <td style="width: 20%; text-align: right;" id="fastEnd">End</td>
-        </tr>
-    </table>
-    <div style="background-color: orange; padding: 3px;">
-        <div style="background-color: black; height: 20px" id="progBar"></div>
+<body>
+    <div class="glass-panel">
+        <div id="GregDate" class="greg-date"></div>
+        <div class="date-row">
+            <div class="hijri-flex">
+                <span id="HijriDate"></span>
+                <div>
+                    <button onclick="changeHijriOffset(-1)">-1</button>
+                    <button onclick="changeHijriOffset(1)">+1</button>
+                </div>
+            </div>
+            <span id="Iftar"></span>
+        </div>
+
+        <div id="Time"></div>
+
+        <div class="progress-container">
+            <div id="progBar"></div>
+        </div>
+        <div class="times-row">
+            <div id="fastStart">Start</div>
+            <div id="fastPct">Progress</div>
+            <div id="fastEnd">End</div>
+        </div>
+
+        <hr>
+
+        <div class="info-grid">
+            <div class="info-card" id="SunPosBox">
+                <strong>Sun Position</strong>
+                <span id="SunPos">Loading...</span>
+            </div>
+            <div class="info-card" id="SunTimesBox">
+                <strong>Daily Times</strong>
+                <div id="SunTimes">Loading...</div>
+            </div>
+        </div>
+
+        <div class="offset-controls">
+            <span>Iftar Offset (mins):</span>
+            <a href="?o=0" class="btn">0</a>
+            <a href="?o=5" class="btn">+5</a>
+            <a href="?o=10" class="btn">+10</a>
+            <a href="?o=15" class="btn">+15</a>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <a href="chart.html" class="btn" style="background: rgba(255, 215, 0, 0.2); border-color: gold;">View Yearly
+                Chart</a>
+        </div>
+
+        <hr>
+        <div style="font-size: 0.9em; opacity: 0.8;">By Ayman Al-Sairafi &middot; Location Auto-Detected</div>
     </div>
-    <hr/>
-    <div id="SunPos" style="font-size: 3vw;">Sun Pos</div>
-    <hr>
-    <div id="SunTimes" style="font-size: 2vw;">Times</div>
-    <hr>
-    <div style="text-align: right; font-size: 2vw;">
-        Time of Iftar after Sunset: 
-        <a href="?o=0">0</a>
-        <a href="?o=5">+5</a>
-        <a href="?o=10">+10</a>
-        <a href="?o=15">+15</a>
-    </div>
-    <hr>
-    <div>By Ayman Al-Sairafi</div>
 </body>
 
 </html>

@@ -1,0 +1,321 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Yearly Imsak & Iftar Chart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="js/suncalc.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Play' rel='stylesheet' type='text/css'>
+    <style>
+        :root {
+            --bg-color-top: #0f2027;
+            --bg-color-bottom: #2c5364;
+            --text-color: #fff;
+            --accent-color: #ffd700;
+        }
+
+        body {
+            font-family: 'Play', sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(to bottom, var(--bg-color-top), var(--bg-color-bottom));
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin: 5px 0 10px 0;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 10px;
+            box-sizing: border-box;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 10px;
+            text-decoration: none;
+            margin-bottom: 10px;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Landscape optimization suggestion banner */
+        #rotateWarning {
+            display: none;
+            background: var(--accent-color);
+            color: black;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        @media screen and (orientation: portrait) {
+            #rotateWarning {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="iftar.html" class="back-btn">&larr; Back to Timer</a>
+    <div id="rotateWarning">Rotate device to landscape for best view</div>
+
+    <div class="chart-container">
+        <canvas id="prayerChart"></canvas>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var latitude = 26.22;
+            var longitude = 50.54;
+
+            // Check for offset parameter
+            const searchParams = new URLSearchParams(window.location.search);
+            var iftarOffset = searchParams.has('o') ? parseInt(searchParams.get('o')) : 5;
+
+            function initChart() {
+                const labels = [];
+                const fajrData = [];
+                const iftarData = [];
+                const fastingData = [];
+
+                const today = new Date();
+                // 305 days in the past, 35 days in the future
+                const startDate = new Date(today.getTime() - (305 * 24 * 60 * 60 * 1000));
+
+                for (let i = 0; i < 340; i++) {
+                    let d = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
+                    let times = SunCalc.getTimes(d, latitude, longitude);
+
+                    // Format Date Label
+                    let labelStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    if (d.getDate() === 1 && d.getMonth() === 0) {
+                        labelStr = d.getFullYear().toString();
+                    } else if (d.getDate() === 1) {
+                        labelStr = d.toLocaleDateString('en-US', { month: 'short' });
+                    }
+                    labels.push(labelStr);
+
+                    // Fajr (Imsak) Time
+                    let fajrDate = times.nightEnd;
+                    let fajrDec = fajrDate.getHours() + (fajrDate.getMinutes() / 60);
+                    fajrData.push(fajrDec);
+
+                    // Iftar Time
+                    let iftarDate = new Date(times.sunset.getTime() + (iftarOffset * 60 * 1000));
+                    let iftarDec = iftarDate.getHours() + (iftarDate.getMinutes() / 60);
+
+                    // Shifted Iftar data to remove Y-axis gap (shift -10 hrs)
+                    iftarData.push(iftarDec - 10);
+
+                    // Fasting Duration
+                    fastingData.push(iftarDec - fajrDec);
+                }
+
+                const ctx = document.getElementById('prayerChart').getContext('2d');
+
+                // Helper to format tooltip decimal back to time string
+                const formatTime = (decimalHours) => {
+                    const hrs = Math.floor(decimalHours);
+                    const mins = Math.round((decimalHours - hrs) * 60).toString().padStart(2, '0');
+                    const ampm = hrs >= 12 ? 'PM' : 'AM';
+                    const displayHrs = hrs % 12 || 12;
+                    return `${displayHrs}:${mins} ${ampm}`;
+                };
+
+                const todayIndex = labels.indexOf(today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Fajr (Imsak)',
+                                data: fajrData,
+                                borderColor: '#87CEEB', // Light Blue
+                                backgroundColor: 'rgba(135, 206, 235, 0.2)',
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                pointHitRadius: 10,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Iftar (Sunset + ' + iftarOffset + 'm)',
+                                data: iftarData,
+                                borderColor: '#ff7e5f', // Sunset Orange
+                                backgroundColor: 'rgba(255, 126, 95, 0.2)',
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                pointHitRadius: 10,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Fasting Duration',
+                                data: fastingData,
+                                borderColor: '#4facfe',
+                                backgroundColor: 'rgba(79, 172, 254, 0.2)',
+                                borderDash: [5, 5],
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                pointHitRadius: 10,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                labels: { color: 'white', font: { family: 'Play', size: 14 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let val = context.parsed.y;
+                                        if (context.dataset.label.includes('Iftar')) {
+                                            return context.dataset.label + ': ' + formatTime(val + 10);
+                                        } else if (context.dataset.label.includes('Fasting')) {
+                                            const hrs = Math.floor(val);
+                                            const mins = Math.round((val - hrs) * 60).toString().padStart(2, '0');
+                                            return context.dataset.label + ': ' + hrs + 'h ' + mins + 'm';
+                                        }
+                                        return context.dataset.label + ': ' + formatTime(val);
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        xMin: todayIndex > -1 ? todayIndex : 305, // fallback to typical index
+                                        xMax: todayIndex > -1 ? todayIndex : 305,
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        label: {
+                                            display: true,
+                                            content: 'Today',
+                                            position: 'end',
+                                            color: 'rgba(255,255,255,0.7)',
+                                            backgroundColor: 'transparent',
+                                            yAdjust: 20
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: {
+                                    color: 'white',
+                                    maxTicksLimit: 12, // Show roughly one tick per month
+                                    autoSkip: true,
+                                    maxRotation: 0
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Time of Day',
+                                    color: 'white'
+                                },
+                                min: 3,
+                                max: 10, // Visually maps to 8 PM (10 + 10)
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: {
+                                    color: 'white',
+                                    callback: function (value) {
+                                        if (value >= 6) {
+                                            return formatTime(value + 10);
+                                        }
+                                        return formatTime(value);
+                                    }
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Total Fasting (Hrs)',
+                                    color: 'white'
+                                },
+                                min: 10,
+                                max: 17,
+                                grid: { drawOnChartArea: false }, // Avoid overlapping grids
+                                ticks: {
+                                    color: '#4facfe',
+                                    callback: function (value) {
+                                        return value + 'h';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Geolocation wrapper
+            function geoSuccess(position) {
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+                initChart();
+            }
+
+            function geoError() {
+                initChart(); // Fallback to default coords
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(geoSuccess, geoError);
+            } else {
+                initChart();
+            }
+        });
+    </script>
+</body>
+
+</html>
