@@ -81,6 +81,51 @@
                 display: block;
             }
         }
+
+        /* Progress Overlay */
+        #progressOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 32, 39, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .progress-box {
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-top: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #progressBarFull {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-color);
+            transition: width 0.1s linear;
+        }
+
+        #progressText {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            color: var(--accent-color);
+        }
     </style>
 </head>
 
@@ -88,6 +133,15 @@
 
     <a href="iftar.html" class="back-btn">&larr; Back to Timer</a>
     <div id="rotateWarning">Rotate device to landscape for best view</div>
+
+    <div id="progressOverlay">
+        <div class="progress-box">
+            <div id="progressText">Calculating Year Data...</div>
+            <div class="progress-bar-container">
+                <div id="progressBarFull"></div>
+            </div>
+        </div>
+    </div>
 
     <div class="chart-container">
         <canvas id="prayerChart"></canvas>
@@ -109,40 +163,58 @@
                 const fastingData = [];
 
                 const today = new Date();
-                // 305 days in the past, 35 days in the future
                 const startDate = new Date(today.getTime() - (305 * 24 * 60 * 60 * 1000));
 
-                for (let i = 0; i < 340; i++) {
-                    let d = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
-                    let times = SunCalc.getTimes(d, latitude, longitude);
+                const totalDays = 340;
+                let currentDay = 0;
+                const chunkSize = 20;
 
-                    // Format Date Label
-                    let labelStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    if (d.getDate() === 1 && d.getMonth() === 0) {
-                        labelStr = d.getFullYear().toString();
-                    } else if (d.getDate() === 1) {
-                        labelStr = d.toLocaleDateString('en-US', { month: 'short' });
+                function processChunk() {
+                    const endDay = Math.min(currentDay + chunkSize, totalDays);
+
+                    for (let i = currentDay; i < endDay; i++) {
+                        let d = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
+                        let times = SunCalc.getTimes(d, latitude, longitude);
+
+                        let labelStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        if (d.getDate() === 1 && d.getMonth() === 0) {
+                            labelStr = d.getFullYear().toString();
+                        } else if (d.getDate() === 1) {
+                            labelStr = d.toLocaleDateString('en-US', { month: 'short' });
+                        }
+                        labels.push(labelStr);
+
+                        let fajrDate = times.nightEnd;
+                        let fajrDec = fajrDate.getHours() + (fajrDate.getMinutes() / 60);
+                        fajrData.push(fajrDec);
+
+                        let iftarDate = new Date(times.sunset.getTime() + (iftarOffset * 60 * 1000));
+                        let iftarDec = iftarDate.getHours() + (iftarDate.getMinutes() / 60);
+                        iftarData.push(iftarDec - 10);
+                        fastingData.push(iftarDec - fajrDec);
                     }
-                    labels.push(labelStr);
 
-                    // Fajr (Imsak) Time
-                    let fajrDate = times.nightEnd;
-                    let fajrDec = fajrDate.getHours() + (fajrDate.getMinutes() / 60);
-                    fajrData.push(fajrDec);
+                    currentDay = endDay;
+                    const percent = Math.floor((currentDay / totalDays) * 100);
+                    document.getElementById('progressBarFull').style.width = percent + '%';
+                    document.getElementById('progressText').innerText = `Calculating: ${percent}%`;
 
-                    // Iftar Time
-                    let iftarDate = new Date(times.sunset.getTime() + (iftarOffset * 60 * 1000));
-                    let iftarDec = iftarDate.getHours() + (iftarDate.getMinutes() / 60);
-
-                    // Shifted Iftar data to remove Y-axis gap (shift -10 hrs)
-                    iftarData.push(iftarDec - 10);
-
-                    // Fasting Duration
-                    fastingData.push(iftarDec - fajrDec);
+                    if (currentDay < totalDays) {
+                        setTimeout(processChunk, 0);
+                    } else {
+                        renderChart(labels, fajrData, iftarData, fastingData);
+                        const overlay = document.getElementById('progressOverlay');
+                        overlay.style.opacity = '0';
+                        setTimeout(() => overlay.style.display = 'none', 500);
+                    }
                 }
 
-                const ctx = document.getElementById('prayerChart').getContext('2d');
+                processChunk();
+            }
 
+            function renderChart(labels, fajrData, iftarData, fastingData) {
+                const ctx = document.getElementById('prayerChart').getContext('2d');
+                const today = new Date();
                 // Helper to format tooltip decimal back to time string
                 const formatTime = (decimalHours) => {
                     const hrs = Math.floor(decimalHours);
