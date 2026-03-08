@@ -635,6 +635,11 @@
         $(document).ready(function () {
             startTimer();
 
+            // Sync chart link with current offset
+            var oParam = new URLSearchParams(window.location.search);
+            var oVal = oParam.has('o') ? oParam.get('o') : '5';
+            document.getElementById('chartLink').href = 'chart.html?o=' + oVal;
+
             // Sync dropdown with saved location if it matches a preset
             const cities = {
                 'bh': { lat: 26.22, lon: 50.54 },
@@ -689,7 +694,7 @@
         </div>
 
         <div style="margin-top: 30px;">
-            <a href="chart.html" class="btn" style="background: rgba(255, 215, 0, 0.2); border-color: gold;">View Yearly
+            <a id="chartLink" href="chart.html" class="btn" style="background: rgba(255, 215, 0, 0.2); border-color: gold;">View Yearly
                 Chart</a>
         </div>
 

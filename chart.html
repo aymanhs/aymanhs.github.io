@@ -149,8 +149,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var latitude = 26.22;
-            var longitude = 50.54;
+            var latitude = parseFloat(localStorage.getItem('latitude')) || 26.22;
+            var longitude = parseFloat(localStorage.getItem('longitude')) || 50.54;
 
             // Check for offset parameter
             const searchParams = new URLSearchParams(window.location.search);
